@@ -186,7 +186,7 @@ elif menu == "📊 Panel de Control y Reportes":
     grafico1, grafico2 = st.columns(2)
 
     with grafico1:
-        st.write("🏃‍♂️ **Asistencia Acumulada por Edad/Rol**")
+        st.write("🏃‍♂️ *Asistencia Acumulada por Edad/Rol*")
         if not df_cell.empty:
             data_asistencia = {
                 'Categoría': ['Adultos', 'Jóvenes', 'Niños', 'Amigos', 'Visitas'],
