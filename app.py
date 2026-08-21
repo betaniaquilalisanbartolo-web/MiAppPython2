@@ -49,9 +49,7 @@ def obtener_nombres_celulas():
     c.execute("SELECT DISTINCT cell_name FROM cell_reports WHERE cell_name IS NOT NULL AND cell_name != ''")
     filas = c.fetchall()
     conn.close()
-    # Convertimos la lista de tuplas en una lista simple de textos
     lista_celulas = [f[0] for f in filas]
-    # Si la base de datos está vacía, damos unos nombres de ejemplo por defecto
     if not lista_celulas:
         lista_celulas = ["Célula Central", "Célula de Jóvenes", "Célula de Damas"]
     lista_celulas.append("➕ Registrar Nueva Célula")
@@ -71,17 +69,11 @@ if menu == "📝 Formularios":
     
     with pestana1:
         st.subheader("Registrar Reporte de Célula")
-        
-        # Cargamos las células existentes para el selector dinámico
         lista_opciones_celulas = obtener_nombres_celulas()
         
         with st.form("form_celula", clear_on_submit=True):
-            # Aquí cambiamos el cuadro de texto manual por un menú desplegable estructurado
             celula_seleccionada = st.selectbox("Selecciona el Nombre de la Célula", lista_opciones_celulas)
-            
-            # Si el usuario elige registrar una nueva, se habilita este campo de texto
             nombre_nueva_celula = st.text_input("Si seleccionaste 'Registrar Nueva Célula', escribe su nombre aquí:")
-            
             meeting_date = st.text_input("Fecha de Reunión (AAAA-MM-DD)")
             col1, col2, col3 = st.columns(3)
             adults = col1.number_input("Adultos", min_value=0, step=1)
@@ -98,7 +90,6 @@ if menu == "📝 Formularios":
             attendance_level = st.slider("Nivel de Asistencia", 1, 10, 5)
             
             if st.form_submit_button("Guardar Reporte"):
-                # Definimos qué nombre de célula guardar en la base de datos
                 if celula_seleccionada == "➕ Registrar Nueva Célula":
                     cell_name_final = nombre_nueva_celula.strip()
                 else:
@@ -118,7 +109,6 @@ if menu == "📝 Formularios":
 
     with pestana2:
         st.subheader("Registrar Nuevo Convertido")
-        # Para asignar célula al nuevo convertido usamos también un menú desplegable limpio
         lista_celulas_convertidos = [c for c in obtener_nombres_celulas() if c != "➕ Registrar Nueva Célula"]
         
         with st.form("form_convertido", clear_on_submit=True):
@@ -196,3 +186,17 @@ elif menu == "📊 Panel de Control y Reportes":
     grafico1, grafico2 = st.columns(2)
 
     with grafico1:
+        st.write("🏃‍♂️ **Asistencia Acumulada por Edad/Rol**")
+        if not df_cell.empty:
+            data_asistencia = {
+                'Categoría': ['Adultos', 'Jóvenes', 'Niños', 'Amigos', 'Visitas'],
+                'Cantidad': [
+                    df_cell['adults'].sum(), df_cell['youth'].sum(), df_cell['children'].sum(),
+                    df_cell['friends'].sum(), df_cell['visits'].sum()
+                ]
+            }
+            st.bar_chart(data=pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
+        else:
+            st.info("Agrega reportes de células para visualizar métricas de asistencia.")
+
+    with grafico2:
