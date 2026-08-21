@@ -1,22 +1,9 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-from io import BytesIO
 
 # --- CONFIGURACIÓN DE LA BASE DE DATOS ---
 DB_PATH = "database.db"
-
-def to_int(value):
-    try:
-        return int(value)
-    except (ValueError, TypeError):
-        return 0
-
-def to_float(value):
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return 0.0
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -42,7 +29,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Función automática para obtener los nombres únicos de las células registradas
 def obtener_nombres_celulas():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -61,7 +47,6 @@ init_db()
 st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
 st.title("⛪ Sistema de Gestión de Células y Miembros")
 
-# Menú de navegación lateral
 menu = st.sidebar.selectbox("Selecciona una sección", ["📝 Formularios", "📊 Panel de Control y Reportes"])
 
 # ================= FORMULARIOS =================
@@ -77,4 +62,38 @@ if menu == "📝 Formularios":
             nombre_nueva_celula = st.text_input("Si seleccionaste 'Registrar Nueva Célula', escribe su nombre aquí:")
             meeting_date = st.text_input("Fecha de Reunión (AAAA-MM-DD)")
             col1, col2, col3 = st.columns(3)
-            adults = col1.number
+            adults = col1.number_input("Adultos", min_value=0, step=1)
+            youth = col2.number_input("Jóvenes", min_value=0, step=1)
+            children = col3.number_input("Niños", min_value=0, step=1)
+            friends = col1.number_input("Amigos", min_value=0, step=1)
+            visits = col2.number_input("Visitas", min_value=0, step=1)
+            house_leader = st.text_input("Líder de Casa")
+            biblical_theme = st.text_input("Tema Bíblico")
+            central_text = st.text_input("Texto Central")
+            offering = st.number_input("Ofrenda", min_value=0.0, step=1.0)
+            needs = st.text_area("Necesidades")
+            spiritual_level = st.selectbox("Nivel Espiritual", ["Bajo", "Medio", "Alto"])
+            attendance_level = st.slider("Nivel de Asistencia", 1, 10, 5)
+
+            if st.form_submit_button("Guardar Reporte"):
+                cell_name_final = nombre_nueva_celula.strip() if celula_seleccionada == "➕ Registrar Nueva Célula" else celula_seleccionada
+                if not cell_name_final:
+                    st.error("Por favor, introduce un nombre válido para la célula.")
+                else:
+                    conn = sqlite3.connect(DB_PATH)
+                    c = conn.cursor()
+                    c.execute('''INSERT INTO cell_reports (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                              (cell_name_final, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
+                    conn.commit()
+                    conn.close()
+                    st.success(f"¡Reporte de la célula '{cell_name_final}' guardado exitosamente!")
+
+    # --- Nuevo convertido ---
+    with pestana2:
+        st.subheader("Registrar Nuevo Convertido")
+        lista_celulas_convertidos = [c for c in obtener_nombres_celulas() if c != "➕ Registrar Nueva Célula"]
+        with st.form("form_convertido", clear_on_submit=True):
+            full_name = st.text_input("Nombre Completo")
+            contact = st.text_input("Contacto / Teléfono")
+            address = st.text_area("Dirección")
+            birth_date = st.text_input("Fecha de Nacimiento
