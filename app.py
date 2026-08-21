@@ -59,3 +59,22 @@ init_db()
 
 # --- INTERFAZ DE STREAMLIT ---
 st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
+st.title("⛪ Sistema de Gestión de Células y Miembros")
+
+# Menú de navegación lateral
+menu = st.sidebar.selectbox("Selecciona una sección", ["📝 Formularios", "📊 Panel de Control y Reportes"])
+
+# ================= FORMULARIOS =================
+if menu == "📝 Formularios":
+    pestana1, pestana2, pestana3 = st.tabs(["📌 Reporte de Célula", "👤 Nuevo Convertido", "📈 Miembro"])
+    
+    # --- Reporte de célula ---
+    with pestana1:
+        st.subheader("Registrar Reporte de Célula")
+        lista_opciones_celulas = obtener_nombres_celulas()
+        with st.form("form_celula", clear_on_submit=True):
+            celula_seleccionada = st.selectbox("Selecciona el Nombre de la Célula", lista_opciones_celulas)
+            nombre_nueva_celula = st.text_input("Si seleccionaste 'Registrar Nueva Célula', escribe su nombre aquí:")
+            meeting_date = st.text_input("Fecha de Reunión (AAAA-MM-DD)")
+            col1, col2, col3 = st.columns(3)
+            adults = col1.number
