@@ -4,7 +4,6 @@ import pandas as pd
 from io import BytesIO
 
 # --- CONFIGURACIÓN DE LA BASE DE DATOS ---
-# Ahora la base de datos se creará directamente en la carpeta del proyecto
 DB_PATH = "database.db"
 
 def to_int(value):
@@ -43,6 +42,21 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Función automática para obtener los nombres únicos de las células registradas
+def obtener_nombres_celulas():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT DISTINCT cell_name FROM cell_reports WHERE cell_name IS NOT NULL AND cell_name != ''")
+    filas = c.fetchall()
+    conn.close()
+    # Convertimos la lista de tuplas en una lista simple de textos
+    lista_celulas = [f[0] for f in filas]
+    # Si la base de datos está vacía, damos unos nombres de ejemplo por defecto
+    if not lista_celulas:
+        lista_celulas = ["Célula Central", "Célula de Jóvenes", "Célula de Damas"]
+    lista_celulas.append("➕ Registrar Nueva Célula")
+    return lista_celulas
+
 init_db()
 
 # --- INTERFAZ DE STREAMLIT ---
@@ -50,16 +64,25 @@ st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
 st.title("⛪ Sistema de Gestión de Células y Miembros")
 
 # Menú de navegación lateral
-menu = st.sidebar.selectbox("Selecciona una sección", ["📝 Formularios", "📊 Reportes y Gráficos"])
+menu = st.sidebar.selectbox("Selecciona una sección", ["📝 Formularios", "📊 Panel de Control y Reportes"])
 
 if menu == "📝 Formularios":
     pestana1, pestana2, pestana3 = st.tabs(["📌 Reporte de Célula", "👤 Nuevo Convertido", "📈 Miembro"])
     
     with pestana1:
         st.subheader("Registrar Reporte de Célula")
+        
+        # Cargamos las células existentes para el selector dinámico
+        lista_opciones_celulas = obtener_nombres_celulas()
+        
         with st.form("form_celula", clear_on_submit=True):
-            cell_name = st.text_input("Nombre de la Célula")
-            meeting_date = st.date_range_picker = st.text_input("Fecha de Reunión (AAAA-MM-DD)")
+            # Aquí cambiamos el cuadro de texto manual por un menú desplegable estructurado
+            celula_seleccionada = st.selectbox("Selecciona el Nombre de la Célula", lista_opciones_celulas)
+            
+            # Si el usuario elige registrar una nueva, se habilita este campo de texto
+            nombre_nueva_celula = st.text_input("Si seleccionaste 'Registrar Nueva Célula', escribe su nombre aquí:")
+            
+            meeting_date = st.text_input("Fecha de Reunión (AAAA-MM-DD)")
             col1, col2, col3 = st.columns(3)
             adults = col1.number_input("Adultos", min_value=0, step=1)
             youth = col2.number_input("Jóvenes", min_value=0, step=1)
@@ -75,16 +98,29 @@ if menu == "📝 Formularios":
             attendance_level = st.slider("Nivel de Asistencia", 1, 10, 5)
             
             if st.form_submit_button("Guardar Reporte"):
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute('''INSERT INTO cell_reports (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                          (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
-                conn.commit()
-                conn.close()
-                st.success("¡Reporte de célula guardado exitosamente!")
+                # Definimos qué nombre de célula guardar en la base de datos
+                if celula_seleccionada == "➕ Registrar Nueva Célula":
+                    cell_name_final = nombre_nueva_celula.strip()
+                else:
+                    cell_name_final = celula_seleccionada
+
+                if not cell_name_final:
+                    st.error("Por favor, introduce un nombre válido para la célula.")
+                else:
+                    conn = sqlite3.connect(DB_PATH)
+                    c = conn.cursor()
+                    c.execute('''INSERT INTO cell_reports (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                              (cell_name_final, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
+                    conn.commit()
+                    conn.close()
+                    st.success(f"¡Reporte de la célula '{cell_name_final}' guardado exitosamente!")
+                    st.rerun()
 
     with pestana2:
         st.subheader("Registrar Nuevo Convertido")
+        # Para asignar célula al nuevo convertido usamos también un menú desplegable limpio
+        lista_celulas_convertidos = [c for c in obtener_nombres_celulas() if c != "➕ Registrar Nueva Célula"]
+        
         with st.form("form_convertido", clear_on_submit=True):
             full_name = st.text_input("Nombre Completo")
             contact = st.text_input("Contacto / Teléfono")
@@ -93,8 +129,8 @@ if menu == "📝 Formularios":
             age = st.number_input("Edad", min_value=0, step=1)
             status = st.text_input("Estado", value="Nuevo")
             conversion_date = st.text_input("Fecha de Conversión (AAAA-MM-DD)")
-            decision_type = st.text_input("Tipo de Decisión")
-            assigned_cell = st.text_input("Célula Asignada")
+            decision_type = st.selectbox("Tipo de Decisión", ["Primera vez", "Reconciliación", "Petición de Oración"])
+            assigned_cell = st.selectbox("Célula Asignada", lista_celulas_convertidos)
             observation = st.text_area("Observaciones")
             
             if st.form_submit_button("Guardar Convertido"):
@@ -104,17 +140,19 @@ if menu == "📝 Formularios":
                           (full_name, contact, address, birth_date, age, status, conversion_date, decision_type, assigned_cell, observation))
                 conn.commit()
                 conn.close()
-                st.success("¡Nuevo convertido guardado!")
+                st.success("¡Nuevo convertido guardado con éxito!")
 
     with pestana3:
         st.subheader("Estadísticas de Miembro")
+        lista_celulas_miembros = [c for c in obtener_nombres_celulas() if c != "➕ Registrar Nueva Célula"]
+        
         with st.form("form_miembro", clear_on_submit=True):
             full_name = st.text_input("Nombre Completo del Miembro")
-            cell = st.text_input("Célula")
+            cell = st.selectbox("Célula a la que Pertenece", lista_celulas_miembros)
             sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
             growth_eval = st.slider("Evaluación de Crecimiento", 1, 10, 5)
             discipleship_type = st.text_input("Tipo de Discipulado")
-            ministry = st.text_input("Ministerio")
+            ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
             
             if st.form_submit_button("Guardar Estadísticas"):
                 conn = sqlite3.connect(DB_PATH)
@@ -125,8 +163,8 @@ if menu == "📝 Formularios":
                 conn.close()
                 st.success("¡Estadísticas de miembro guardadas!")
 
-elif menu == "📊 Reportes y Gráficos":
-    st.subheader("Visualización de Datos")
+elif menu == "📊 Panel de Control y Reportes":
+    st.subheader("📊 Panel de Análisis Automático de la Iglesia")
     
     conn = sqlite3.connect(DB_PATH)
     df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
@@ -134,43 +172,27 @@ elif menu == "📊 Reportes y Gráficos":
     df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
     conn.close()
 
-    # Filtros de búsqueda para Reportes de Célula
-    st.markdown("### 🔍 Filtrar Reportes de Células")
-    col_f1, col_f2 = st.columns(2)
-    filtro_fecha = col_f1.text_input("Filtrar por fecha (AAAA-MM-DD)")
-    filtro_celula = col_f2.text_input("Filtrar por nombre de célula")
-
-    df_cell_filtrado = df_cell.copy()
-    if filtro_fecha:
-        df_cell_filtrado = df_cell_filtrado[df_cell_filtrado['meeting_date'] == filtro_fecha]
-    if filtro_celula:
-        df_cell_filtrado = df_cell_filtrado[df_cell_filtrado['cell_name'].str.contains(filtro_celula, case=False, na=False)]
-
-    st.write("📋 **Reportes de Células**", df_cell_filtrado)
+    # --- 1. TARJETAS MÉTRICAS AUTOMÁTICAS (KPIs) ---
+    st.markdown("### 📈 Indicadores Clave del Sistema")
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
     
-    # Botones de exportación en la barra lateral o debajo
-    col_exp1, col_exp2 = st.columns(2)
-    if not df_cell.empty:
-        csv = df_cell.to_csv(index=False).encode('utf-8')
-        col_exp1.download_button("📥 Descargar CSV", data=csv, file_name="reportes_celula.csv", mime="text/csv")
-        
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            df_cell.to_excel(writer, index=False, sheet_name="Reportes")
-        col_exp2.download_button("📥 Descargar Excel", data=output.getvalue(), file_name="reportes_celula.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    with kpi1:
+        total_ofrenda = df_cell['offering'].sum() if not df_cell.empty else 0.0
+        st.metric("Total Ofrendas", f"${total_ofrenda:,.2f}")
+    with kpi2:
+        total_nuevos = len(df_converts)
+        st.metric("Nuevos Convertidos", f"{total_nuevos} personas")
+    with kpi3:
+        miembros_activos = len(df_members[df_members['status'] == 'activo']) if not df_members.empty else 0
+        st.metric("Miembros Activos", f"{miembros_activos} personas")
+    with kpi4:
+        total_asistencia = (df_cell['adults'].sum() + df_cell['youth'].sum() + df_cell['children'].sum()) if not df_cell.empty else 0
+        st.metric("Impacto Total Asistencia", f"{total_asistencia} asistencias")
 
-    st.write("📋 **Nuevos Convertidos**", df_converts)
-    st.write("📋 **Estadísticas de Miembros**", df_members)
+    st.markdown("---")
 
-    # Acción de dar de baja / actualizar estado de miembro
-    st.markdown("### ⚙️ Acciones de Miembros")
-    if not df_members.empty:
-        miembro_id = st.number_input("ID del Miembro para marcar como 'Desertó'", min_value=1, step=1)
-        if st.button("Confirmar Estado 'Desertó'"):
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("UPDATE members_stats SET status='desertó' WHERE id=?", (miembro_id,))
-            conn.commit()
-            conn.close()
-            st.success(f"Miembro con ID {miembro_id} actualizado.")
-            st.rerun()
+    # --- 2. ANÁLISIS GRÁFICO DE CÉLULAS Y OFRENDAS ---
+    st.markdown("### 📊 Gráficos de Células y Finanzas")
+    grafico1, grafico2 = st.columns(2)
+
+    with grafico1:
