@@ -82,18 +82,4 @@ if menu == "📝 Formularios":
                 else:
                     conn = sqlite3.connect(DB_PATH)
                     c = conn.cursor()
-                    c.execute('''INSERT INTO cell_reports (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                              (cell_name_final, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
-                    conn.commit()
-                    conn.close()
-                    st.success(f"¡Reporte de la célula '{cell_name_final}' guardado exitosamente!")
-
-    # --- Nuevo convertido ---
-    with pestana2:
-        st.subheader("Registrar Nuevo Convertido")
-        lista_celulas_convertidos = [c for c in obtener_nombres_celulas() if c != "➕ Registrar Nueva Célula"]
-        with st.form("form_convertido", clear_on_submit=True):
-            full_name = st.text_input("Nombre Completo")
-            contact = st.text_input("Contacto / Teléfono")
-            address = st.text_area("Dirección")
-            birth_date = st.text_input("Fecha de Nacimiento
+                    c.execute('''INSERT INTO cell_reports (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level) VALUES (?,
