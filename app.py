@@ -270,7 +270,7 @@ elif menu == "📝 Registro de Nuevos Convertidos":
 
 
 
-    elif menu == "📋 Reportes de Cultos de Célula":
+elif menu == "📋 Reportes de Cultos de Célula":
         st.subheader("Registrar Reporte de Culto de Célula")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_culto", clear_on_submit=True):
@@ -295,7 +295,7 @@ elif menu == "📝 Registro de Nuevos Convertidos":
 
 
 
-    elif menu == "📊 Panel de Control y Reportes":
+elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
         conn = sqlite3.connect(DB_PATH)
         df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
