@@ -153,6 +153,27 @@ if st.session_state['logged_in']:
 
     # ================= REGISTRO DE MIEMBROS POR CÉLULA =================
     if menu == "👥 Registro de Miembros por Célula":
+        # bloque de miembros...
+
+    # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
+    elif menu == "📝 Registro de Nuevos Convertidos":
+        # bloque de convertidos...
+
+    # ================= REPORTES DE CULTOS DE CÉLULA =================
+    elif menu == "📋 Reportes de Cultos de Célula":
+        # bloque de cultos...
+
+    # ================= PANEL DE CONTROL =================
+    elif menu == "📊 Panel de Control y Reportes":
+        # bloque de panel...
+
+    # ================= REGISTRO DE DESCARRIADOS =================
+    elif menu == "🚨 Registro de Descarriados":
+        # bloque de descarriados...
+
+
+    # ================= REGISTRO DE MIEMBROS POR CÉLULA =================
+    if menu == "👥 Registro de Miembros por Célula":
         st.subheader("Registrar Miembros en una Célula")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_miembros_celula", clear_on_submit=True):
