@@ -6,6 +6,30 @@ import datetime
 DB_PATH = "database.db"
 
 def init_db():
+    elif menu == "🔐 Registrar Líder":
+    st.subheader("Registrar Nuevo Líder")
+    with st.form("form_registro_lider", clear_on_submit=True):
+        username = st.text_input("Usuario del Líder")
+        password = st.text_input("Contraseña", type="password")
+        if st.form_submit_button("Guardar Líder"):
+            if username.strip() and password.strip():
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                try:
+                    c.execute("INSERT INTO leaders (username, password) VALUES (?, ?)", (username.strip(), password.strip()))
+                    conn.commit()
+                    st.success(f"¡Líder '{username}' registrado exitosamente!")
+                except sqlite3.IntegrityError:
+                    st.error("Ya existe un líder con ese usuario.")
+                conn.close()
+            else:
+                st.error("Usuario y contraseña no pueden estar vacíos.")
+
+    menu = st.sidebar.selectbox(
+    "Selecciona una sección",
+    ["➕ Registro de Célula", "👥 Registro de Miembros por Célula", "📝 Formularios", "📊 Panel de Control y Reportes", "🔐 Registrar Líder"]
+)
+
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     # Tablas principales
