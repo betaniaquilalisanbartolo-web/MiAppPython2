@@ -180,7 +180,7 @@ if menu == "👥 Registro de Miembros por Célula":
 elif menu == "👥 Registro de Miembros por Célula":
     # bloque de miembros
 
- elif menu == "📝 Registro de Nuevos Convertidos":
+elif menu == "📝 Registro de Nuevos Convertidos":
     # bloque de convertidos
 
 elif menu == "📋 Reportes de Cultos de Célula":
