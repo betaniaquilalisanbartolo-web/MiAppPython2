@@ -97,8 +97,14 @@ elif menu == "📝 Formularios":
             spiritual_level = st.selectbox("Nivel Espiritual", ["Oración", "Gozo", "Comunión", "Adoración"])
             attendance_level = st.slider("Nivel de Asistencia", 1, 10, 5)
 
-            if st.form_submit_button("Guardar Reporte"):
+           if st.form_submit_button("Guardar Estadísticas"):
                 conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
-                c.execute('''INSERT INTO cell_reports (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                          (celula_seleccionada, str(meeting
+                c.execute('''INSERT INTO members_stats (full_name, cell, sex, growth_eval, discipleship_type, ministry) VALUES (?, ?, ?, ?, ?, ?)''',
+                          (full_name, cell, sex, growth_eval, discipleship_type, ministry))
+                conn.commit()
+                conn.close()
+                st.success("¡Estadísticas de miembro guardadas!")
+
+# ================= PANEL DE CONTROL =================
+elif menu == "📊 Panel de Control y Reportes
