@@ -92,24 +92,11 @@ else:
     if st.sidebar.button("Cerrar sesión"):
         st.session_state['logged_in'] = False
 
-# --- CONTENIDO SOLO SI ESTÁ LOGUEADO ---
-if st.session_state['logged_in']:
-    st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
-    st.title("⛪ Sistema de Gestión de Células y Miembros")
+    # --- Bloque de administración en la barra lateral ---
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("⚙️ Administración")
 
-    menu = st.sidebar.selectbox(
-        "Selecciona una sección",
-        [
-            "➕ Registro de Célula",
-            "👥 Registro de Miembros por Célula",
-            "📝 Registro de Nuevos Convertidos",
-            "📋 Reportes de Cultos de Célula",
-            "📊 Panel de Control y Reportes"
-        ]
-    )
-
-    # ================= REGISTRO DE CÉLULA =================
-    if menu == "➕ Registro de Célula":
+    if st.sidebar.button("Registrar Nueva Célula"):
         st.subheader("Registrar Nueva Célula")
         with st.form("form_registro_celula", clear_on_submit=True):
             cell_name = st.text_input("Nombre de la Célula")
@@ -128,180 +115,40 @@ if st.session_state['logged_in']:
                 else:
                     st.error("El nombre de la célula no puede estar vacío.")
 
-    # ================= REGISTRO DE MIEMBROS POR CÉLULA =================
-    elif menu == "👥 Registro de Miembros por Célula":
-        st.subheader("Registrar Miembros en una Célula")
-        lista_celulas = obtener_nombres_celulas()
-        with st.form("form_miembros_celula", clear_on_submit=True):
-            cell = st.selectbox("Selecciona la Célula", lista_celulas)
-            full_name = st.text_input("Nombre Completo del Miembro")
-            age = st.number_input("Edad", min_value=1, max_value=120)
-            phone = st.text_input("Teléfono")
-            sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
-            discipulado = st.radio("¿Está siendo discipulado?", ["Sí", "No"])
-            otra_iglesia = st.radio("¿Vino de otra iglesia?", ["Sí", "No"])
-            fecha_ingreso = st.date_input("Fecha de Ingreso")
-            ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
+    if st.sidebar.button("Registrar Nuevo Líder"):
+        st.subheader("Registrar Nuevo Líder")
+        with st.form("form_registro_lider_admin", clear_on_submit=True):
+            username = st.text_input("Usuario del Líder")
+            password = st.text_input("Contraseña", type="password")
+            if st.form_submit_button("Guardar Líder"):
+                if username.strip() and password.strip():
+                    conn = sqlite3.connect(DB_PATH)
+                    c = conn.cursor()
+                    try:
+                        c.execute("INSERT INTO leaders (username, password) VALUES (?, ?)", (username.strip(), password.strip()))
+                        conn.commit()
+                        st.success(f"¡Líder '{username}' registrado exitosamente!")
+                    except sqlite3.IntegrityError:
+                        st.error("Ya existe un líder con ese usuario.")
+                    conn.close()
+                else:
+                    st.error("Usuario y contraseña no pueden estar vacíos.")
 
-            if st.form_submit_button("Guardar Miembro"):
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute('''INSERT INTO members_stats 
-                    (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (full_name, age, phone, cell, sex, discipulado, otra_iglesia, fecha_ingreso, ministry, "activo"))
-                conn.commit()
-                conn.close()
-                st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
+# --- CONTENIDO SOLO SI ESTÁ LOGUEADO ---
+if st.session_state['logged_in']:
+    st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
+    st.title("⛪ Sistema de Gestión de Células y Miembros")
 
-    # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
-    elif menu == "📝 Registro de Nuevos Convertidos":
-        st.subheader("Registrar Nuevos Convertidos por Célula")
-        lista_celulas = obtener_nombres_celulas()
-        with st.form("form_convertidos", clear_on_submit=True):
-            full_name = st.text_input("Nombres y Apellidos")
-            age = st.number_input("Edad", min_value=1, max_value=120)
-            phone = st.text_input("Número de Teléfono")
-            address = st.text_input("Dirección")
-            assigned_cell = st.selectbox("Célula Asignada", lista_celulas)
-            decision_type = st.radio("Tipo de Decisión", ["Acepto", "Reconciliación"])
-            conversion_date = st.date_input("Fecha de la Decisión")
+    # Menú principal en la página principal
+    menu = st.selectbox(
+        "Selecciona una sección",
+        [
+            "👥 Registro de Miembros por Célula",
+            "📝 Registro de Nuevos Convertidos",
+            "📋 Reportes de Cultos de Célula",
+            "📊 Panel de Control y Reportes"
+        ]
+    )
 
-            if st.form_submit_button("Guardar Convertido"):
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute('''INSERT INTO new_converts 
-                    (full_name, age, contact, address, assigned_cell, decision_type, conversion_date) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)''',
-                    (full_name, age, phone, address, assigned_cell, decision_type, conversion_date))
-                conn.commit()
-                conn.close()
-                st.success(f"¡Nuevo convertido '{full_name}' registrado en la célula '{assigned_cell}'!")
-
-      # ================= REPORTES DE CULTOS DE CÉLULA =================
-    elif menu == "📋 Reportes de Cultos de Célula":
-        st.subheader("Registrar Reporte de Culto de Célula")
-        lista_celulas = obtener_nombres_celulas()
-        with st.form("form_culto", clear_on_submit=True):
-            cell_name = st.selectbox("Nombre de la Célula", lista_celulas)
-            meeting_date = st.date_input("Fecha de Reunión")
-            place = st.text_input("Lugar de Reunión")
-            adults = st.number_input("Número de Adultos", min_value=0)
-            youth = st.number_input("Número de Jóvenes (13-30)", min_value=0)
-            children = st.number_input("Número de Niños", min_value=0)
-            new_guests = st.number_input("Invitados Nuevos", min_value=0)
-            friends = st.number_input("Número de Amigos", min_value=0)
-            offering = st.number_input("Total de Ofrenda", min_value=0.0, format="%.2f")
-            biblical_theme = st.text_input("Tema Bíblico Compartido")
-            central_text = st.text_input("Versículo Clave")
-            needs = st.multiselect("Necesidades Detectadas", ["Oración", "Consejería", "Ayuda práctica", "Otros"])
-            plan = st.text_area("Plan de Multiplicación de la Célula")
-            ambiente = st.selectbox("Ambiente de la Reunión", ["Gozo", "Unidad", "Oración", "Otros"])
-
-            if st.form_submit_button("Guardar Reporte"):
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute('''INSERT INTO cell_reports 
-                    (cell_name, meeting_date, adults, youth, children, friends, visits, offering, biblical_theme, central_text, needs, spiritual_level) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (cell_name, meeting_date, adults, youth, children, friends, new_guests, offering, biblical_theme, central_text, ", ".join(needs), ambiente))
-                conn.commit()
-                conn.close()
-                st.success(f"¡Reporte de culto registrado para la célula '{cell_name}'!")
-
-
-    elif menu == "📊 Panel de Control y Reportes":
-        st.subheader("📊 Panel de Análisis Automático de la Iglesia")
-        conn = sqlite3.connect(DB_PATH)
-        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
-        df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
-        df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
-        conn.close()
-
-        hoy = datetime.date.today()
-        mes_actual = hoy.month
-        anio_actual = hoy.year
-
-        # --- Reportes de cultos por mes ---
-        if not df_cell.empty and 'meeting_date' in df_cell.columns:
-            df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
-            df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
-        else:
-            df_cell_mes = pd.DataFrame()
-
-        # --- Convertidos por mes ---
-        if not df_converts.empty and 'conversion_date' in df_converts.columns:
-            df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
-            df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
-        else:
-            df_converts_mes = pd.DataFrame()
-
-        # --- Discipulado por célula ---
-        if not df_members.empty and 'discipleship_type' in df_members.columns:
-            discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
-        else:
-            discipulado_mes = pd.DataFrame()
-
-        # --- KPIs ---
-        total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
-        total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
-        total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
-
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-
-        with kpi1:
-            st.metric("Ofrenda del Mes", f"${total_ofrenda_mes:,.2f}")
-
-        with kpi2:
-            st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
-
-        with kpi3:
-            st.metric("En Discipulado", f"{total_discipulado_mes} personas")
-
-        with kpi4:
-            total_asistencia = (
-                df_cell_mes['adults'].sum() + df_cell_mes['youth'].sum() + df_cell_mes['children'].sum()
-            ) if not df_cell_mes.empty else 0
-            st.metric("Asistencia del Mes", f"{total_asistencia} asistencias")
-
-        # --- Tablas detalladas ---
-        st.markdown("### 📌 Reportes de Células (Mes Actual)")
-        st.dataframe(df_cell_mes)
-
-        st.markdown("### 👤 Nuevos Convertidos (Mes Actual)")
-        st.dataframe(df_converts_mes)
-
-        st.markdown("### 📖 Miembros en Discipulado")
-        st.dataframe(discipulado_mes)
-
-        # --- Gráfica de crecimiento por célula ---
-        st.markdown("### 📈 Crecimiento de las Células")
-
-        if not df_members.empty or not df_converts.empty:
-            # Agrupar miembros por célula
-            miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
-            miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
-
-            # Agrupar convertidos por célula
-            convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
-            convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
-
-            # Unir ambos DataFrames
-            crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
-                                   left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
-
-            # Ajustar nombres de columnas
-            crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
-            crecimiento = crecimiento[["Célula", "Miembros", "Convertidos"]]
-
-            # Mostrar gráfica
-            st.bar_chart(crecimiento.set_index("Célula"))
-        else:
-            st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
-
-
-                
-
-
-
-
+    # --- Aquí van los bloques de miembros, convertidos, reportes y panel ---
+    # (los que ya te pasé en mensajes anteriores, incluyendo el Panel con KPIs y la gráfica)
