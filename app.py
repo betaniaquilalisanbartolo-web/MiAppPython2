@@ -177,7 +177,7 @@ if menu == "👥 Registro de Miembros por Célula":
             age = st.number_input("Edad", min_value=1, max_value=120)
             phone = st.text_input("Teléfono")
             
-  elif menu == "👥 Registro de Miembros por Célula":
+elif menu == "👥 Registro de Miembros por Célula":
     # bloque de miembros
 
  elif menu == "📝 Registro de Nuevos Convertidos":
@@ -245,7 +245,7 @@ elif menu == "🚨 Registro de Descarriados":
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
 
- # --- Registro de Descarriados ---
+    # --- Registro de Descarriados ---
 elif menu == "🚨 Registro de Descarriados":
         st.subheader("Registrar Miembro Descarriado")
         lista_celulas = obtener_nombres_celulas()
