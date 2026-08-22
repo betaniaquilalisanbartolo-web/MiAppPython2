@@ -138,17 +138,18 @@ else:
 if st.session_state['logged_in']:
     st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
     st.title("⛪ Sistema de Gestión de Células y Miembros")
+# Menú principal en la página principal
+menu = st.selectbox(
+    "Selecciona una sección",
+    [
+        "👥 Registro de Miembros por Célula",
+        "📝 Registro de Nuevos Convertidos",
+        "📋 Reportes de Cultos de Célula",
+        "📊 Panel de Control y Reportes",
+        "🚨 Registro de Descarriados",   
+    ]
+)
 
-    # Menú principal en la página principal
-    menu = st.selectbox(
-        "Selecciona una sección",
-        [
-            "👥 Registro de Miembros por Célula",
-            "📝 Registro de Nuevos Convertidos",
-            "📋 Reportes de Cultos de Célula",
-            "📊 Panel de Control y Reportes"
-        ]
-    )
 
 elif menu == "🚨 Registro de Descarriados":
         st.subheader("Registrar Miembro Descarriado")
