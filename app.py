@@ -176,7 +176,7 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
 
-   # --- Registro de Descarriados ---
+# --- Registro de Descarriados ---
 elif menu == "🚨 Registro de Descarriados":
     st.subheader("Registrar Miembro Descarriado")
     lista_celulas = obtener_nombres_celulas()
