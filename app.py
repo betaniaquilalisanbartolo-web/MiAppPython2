@@ -186,4 +186,9 @@ if st.session_state['logged_in']:
             phone = st.text_input("Teléfono")
             address = st.text_input("Dirección")
             assigned_cell = st.selectbox("Célula Asignada", lista_celulas)
-            decision_type = st.radio("Tipo de
+            decision_type = st.radio("Tipo de Decisión", ["Acepto", "Reconciliación"])
+            conversion_date = st.date_input("Fecha de la Decisión")
+
+            if st.form_submit_button("Guardar Convertido"):
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
