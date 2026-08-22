@@ -190,7 +190,7 @@ elif menu == "🚨 Registro de Descarriados":
 
 
     # ================= REGISTRO DE MIEMBROS POR CÉLULA =================
-    if menu == "👥 Registro de Miembros por Célula":
+if menu == "👥 Registro de Miembros por Célula":
         st.subheader("Registrar Miembros en una Célula")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_miembros_celula", clear_on_submit=True):
