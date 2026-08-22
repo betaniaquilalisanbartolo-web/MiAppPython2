@@ -168,16 +168,16 @@ if st.session_state['logged_in']:
     if menu == "👥 Registro de Miembros por Célula":
         # bloque de miembros
 
-    elif menu == "📝 Registro de Nuevos Convertidos":
+elif menu == "📝 Registro de Nuevos Convertidos":
         # bloque de convertidos
 
-    elif menu == "📋 Reportes de Cultos de Célula":
+elif menu == "📋 Reportes de Cultos de Célula":
         # bloque de cultos
 
-    elif menu == "📊 Panel de Control y Reportes":
+elif menu == "📊 Panel de Control y Reportes":
         # bloque del panel
 
-    elif menu == "🚨 Registro de Descarriados":
+elif menu == "🚨 Registro de Descarriados":
         st.subheader("Registrar Miembro Descarriado")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_descarriados", clear_on_submit=True):
