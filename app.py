@@ -206,8 +206,8 @@ if st.session_state['logged_in']:
 
 
 
-# ================= REGISTRO DE NUEVOS CONVERTIDOS =================
-    elif menu == "📝 Registro de Nuevos Convertidos":
+     # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
+elif menu == "📝 Registro de Nuevos Convertidos":
     st.subheader("Registrar Nuevos Convertidos")
     lista_celulas = obtener_nombres_celulas()
     with st.form("form_convertidos", clear_on_submit=True):
