@@ -16,13 +16,13 @@ def init_db():
         needs TEXT, spiritual_level TEXT, attendance_level INTEGER
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS new_converts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, contact TEXT, address TEXT,
-        birth_date TEXT, age INTEGER, status TEXT, conversion_date TEXT,
-        decision_type TEXT, assigned_cell TEXT, observation TEXT
+        id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, age INTEGER, contact TEXT,
+        address TEXT, assigned_cell TEXT, decision_type TEXT, conversion_date TEXT
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS members_stats (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, cell TEXT, sex TEXT,
-        growth_eval INTEGER, discipleship_type TEXT, ministry TEXT, status TEXT DEFAULT 'activo'
+        id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, age INTEGER, contact TEXT,
+        cell TEXT, sex TEXT, discipleship_type TEXT, other_church TEXT, ingreso_date TEXT,
+        ministry TEXT, status TEXT DEFAULT 'activo'
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS cells (
         id INTEGER PRIMARY KEY AUTOINCREMENT, cell_name TEXT UNIQUE, leader TEXT
@@ -102,7 +102,8 @@ if st.session_state['logged_in']:
         [
             "➕ Registro de Célula",
             "👥 Registro de Miembros por Célula",
-            "📝 Formularios",
+            "📝 Registro de Nuevos Convertidos",
+            "📋 Reportes de Cultos de Célula",
             "📊 Panel de Control y Reportes"
         ]
     )
@@ -134,74 +135,52 @@ if st.session_state['logged_in']:
         with st.form("form_miembros_celula", clear_on_submit=True):
             cell = st.selectbox("Selecciona la Célula", lista_celulas)
             full_name = st.text_input("Nombre Completo del Miembro")
+            age = st.number_input("Edad", min_value=1, max_value=120)
+            phone = st.text_input("Teléfono")
             sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
-            discipleship_type = st.text_input("Tipo de Discipulado")
+            discipulado = st.radio("¿Está siendo discipulado?", ["Sí", "No"])
+            otra_iglesia = st.radio("¿Vino de otra iglesia?", ["Sí", "No"])
+            fecha_ingreso = st.date_input("Fecha de Ingreso")
             ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
 
             if st.form_submit_button("Guardar Miembro"):
                 conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
-                c.execute('''INSERT INTO members_stats (full_name, cell, sex, discipleship_type, ministry) VALUES (?, ?, ?, ?, ?)''',
-                          (full_name, cell, sex, discipleship_type, ministry))
+                c.execute('''INSERT INTO members_stats 
+                    (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (full_name, age, phone, cell, sex, discipulado, otra_iglesia, fecha_ingreso, ministry, "activo"))
                 conn.commit()
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
 
-    # ================= FORMULARIOS =================
-    elif menu == "📝 Formularios":
-        st.info("Aquí se mantienen los formularios que ya construimos en pasos anteriores.")
+    # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
+    elif menu == "📝 Registro de Nuevos Convertidos":
+        st.subheader("Registrar Nuevos Convertidos por Célula")
+        lista_celulas = obtener_nombres_celulas()
+        with st.form("form_convertidos", clear_on_submit=True):
+            full_name = st.text_input("Nombres y Apellidos")
+            age = st.number_input("Edad", min_value=1, max_value=120)
+            phone = st.text_input("Número de Teléfono")
+            address = st.text_input("Dirección")
+            assigned_cell = st.selectbox("Célula Asignada", lista_celulas)
+            decision_type = st.radio("Tipo de Decisión", ["Acepto", "Reconciliación"])
+            conversion_date = st.date_input("Fecha de la Decisión")
 
-    # ================= PANEL DE CONTROL =================
-    elif menu == "📊 Panel de Control y Reportes":
-        st.subheader("📊 Panel de Análisis Automático de la Iglesia")
-        conn = sqlite3.connect(DB_PATH)
-        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
-        df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
-        df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
-        conn.close()
+            if st.form_submit_button("Guardar Convertido"):
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute('''INSERT INTO new_converts 
+                    (full_name, age, contact, address, assigned_cell, decision_type, conversion_date) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                    (full_name, age, phone, address, assigned_cell, decision_type, conversion_date))
+                conn.commit()
+                conn.close()
+                st.success(f"¡Nuevo convertido '{full_name}' registrado en la célula '{assigned_cell}'!")
 
-        hoy = datetime.date.today()
-        mes_actual = hoy.month
-        anio_actual = hoy.year
-
-        if not df_cell.empty and 'meeting_date' in df_cell.columns:
-            df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
-            df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
-        else:
-            df_cell_mes = pd.DataFrame()
-
-        if not df_converts.empty and 'conversion_date' in df_converts.columns:
-            df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
-            df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
-        else:
-            df_converts_mes = pd.DataFrame()
-
-        total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
-        total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
-
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-
-        with kpi1:
-            st.metric("Ofrenda del Mes", f"${total_ofrenda_mes:,.2f}")
-
-        with kpi2:
-            st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
-
-        with kpi3:
-            miembros_activos = len(df_members[df_members['status'] == 'activo']) if not df_members.empty else 0
-            st.metric("Miembros Activos", f"{miembros_activos} personas")
-
-        with kpi4:
-            total_asistencia = (
-                df_cell_mes['adults'].sum() + df_cell_mes['youth'].sum() + df_cell_mes['children'].sum()
-            ) if not df_cell_mes.empty else 0
-            st.metric("Asistencia del Mes", f"{total_asistencia} asistencias")
-
-        st.markdown("### 📌 Reportes de Células")
-        st.dataframe(df_cell_mes)
-
-        st.markdown("### 👤 Nuevos Convertidos")
-        st.dataframe(df_converts_mes)
-
-        st.markdown("### 📈 Miembros")
-        st.dataframe(df_members)
+    # ================= REPORTES DE CULTOS DE CÉLULA =================
+    elif menu == "📋 Reportes de Cultos de Célula":
+        st.subheader("Registrar Reporte de Culto de Célula")
+        lista_celulas = obtener_nombres_celulas()
+        with st.form("form_culto", clear_on_submit=True):
+            cell_name
