@@ -283,8 +283,51 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
 
+# --- CONTENIDO SOLO SI ESTÁ LOGUEADO ---
+if st.session_state['logged_in']:
+    st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
+    st.title("⛪ Sistema de Gestión de Células y Miembros")
 
-elif menu == "📝 Registro de Nuevos Convertidos":
+    # Menú principal
+    menu = st.selectbox(
+        "Selecciona una sección",
+        [
+            "👥 Registro de Miembros por Célula",
+            "📝 Registro de Nuevos Convertidos",
+            "📋 Reportes de Cultos de Célula",
+            "📊 Panel de Control y Reportes",
+            "🚨 Registro de Descarriados"
+        ]
+    )
+
+    # ================= REGISTRO DE MIEMBROS POR CÉLULA =================
+    if menu == "👥 Registro de Miembros por Célula":
+        st.subheader("Registrar Miembros en una Célula")
+        lista_celulas = obtener_nombres_celulas()
+        with st.form("form_miembros_celula", clear_on_submit=True):
+            full_name = st.text_input("Nombre Completo")
+            age = st.number_input("Edad", min_value=1, max_value=120)
+            phone = st.text_input("Teléfono")
+            cell = st.selectbox("Célula", lista_celulas)
+            sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
+            discipulado = st.radio("¿Está siendo discipulado?", ["Sí", "No"])
+            otra_iglesia = st.radio("¿Vino de otra iglesia?", ["Sí", "No"])
+            fecha_ingreso = st.date_input("Fecha de Ingreso")
+            ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
+
+            if st.form_submit_button("Guardar Miembro"):
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute('''INSERT INTO members_stats 
+                    (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (full_name, age, phone, cell, sex, discipulado, otra_iglesia, fecha_ingreso, ministry, "activo"))
+                conn.commit()
+                conn.close()
+                st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
+
+    # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
+    elif menu == "📝 Registro de Nuevos Convertidos":
         st.subheader("Registrar Nuevos Convertidos")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_convertidos", clear_on_submit=True):
@@ -306,6 +349,84 @@ elif menu == "📝 Registro de Nuevos Convertidos":
                 conn.commit()
                 conn.close()
                 st.success(f"¡Nuevo convertido '{full_name}' registrado en la célula '{assigned_cell}'!")
+
+    # ================= REPORTES DE CULTOS DE CÉLULA =================
+    elif menu == "📋 Reportes de Cultos de Célula":
+        st.subheader("Reportes de Cultos de Célula")
+        conn = sqlite3.connect(DB_PATH)
+        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+        conn.close()
+        if not df_cell.empty:
+            st.dataframe(df_cell)
+        else:
+            st.info("No hay reportes de cultos registrados aún.")
+
+    # ================= PANEL DE CONTROL =================
+    elif menu == "📊 Panel de Control y Reportes":
+        st.subheader("📊 Panel de Análisis Automático de la Iglesia")
+        conn = sqlite3.connect(DB_PATH)
+        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+        df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
+        df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+        c = conn.cursor()
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='descarriados'")
+        if c.fetchone():
+            df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
+        else:
+            df_descarriados = pd.DataFrame()
+        conn.close()
+
+        # KPIs
+        total_ofrenda = df_cell['offering'].sum() if not df_cell.empty else 0.0
+        total_convertidos = len(df_converts) if not df_converts.empty else 0
+        total_discipulado = len(df_members[df_members['discipleship_type']=="Sí"]) if not df_members.empty else 0
+        total_asistencia = df_cell[['adults','youth','children']].sum().sum() if not df_cell.empty else 0
+        total_descarriados = len(df_descarriados) if not df_descarriados.empty else 0
+
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        with kpi1: st.metric("Ofrenda Total", f"${total_ofrenda:,.2f}")
+        with kpi2: st.metric("Convertidos", f"{total_convertidos} personas")
+        with kpi3: st.metric("En Discipulado", f"{total_discipulado} personas")
+        with kpi4: st.metric("Asistencia", f"{total_asistencia} asistencias")
+        st.metric("Miembros Descarriados", f"{total_descarriados}")
+
+        # Tablas
+        st.markdown("### 📌 Reportes de Células")
+        st.dataframe(df_cell)
+        st.markdown("### 👤 Nuevos Convertidos")
+        st.dataframe(df_converts)
+        st.markdown("### 📖 Miembros en Discipulado")
+        st.dataframe(df_members[df_members['discipleship_type']=="Sí"])
+        if not df_descarriados.empty:
+            st.markdown("### 🚨 Lista de Descarriados")
+            st.dataframe(df_descarriados)
+
+    # ================= REGISTRO DE DESCARRIADOS =================
+    elif menu == "🚨 Registro de Descarriados":
+        st.subheader("Registrar Miembro Descarriado")
+        lista_celulas = obtener_nombres_celulas()
+        with st.form("form_descarriados", clear_on_submit=True):
+            full_name = st.text_input("Nombre Completo")
+            cell = st.selectbox("Célula", lista_celulas)
+            fecha_desercion = st.date_input("Fecha de Deserción")
+            motivo = st.text_area("Motivo de Deserción (opcional)")
+
+            if st.form_submit_button("Guardar Descarriado"):
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute('''CREATE TABLE IF NOT EXISTS descarriados (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    full_name TEXT, 
+                    cell TEXT, 
+                    fecha_desercion TEXT, 
+                    motivo TEXT
+                )''')
+                c.execute("INSERT INTO descarriados (full_name, cell, fecha_desercion, motivo) VALUES (?, ?, ?, ?)",
+                          (full_name, cell, fecha_desercion, motivo))
+                c.execute("UPDATE members_stats SET status='desertado' WHERE full_name=? AND cell=?", (full_name, cell))
+                conn.commit()
+                conn.close()
+                st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
 
 elif menu == "📋 Reportes de Cultos de Célula":
         st.subheader("Registrar Reporte de Culto de Célula")
