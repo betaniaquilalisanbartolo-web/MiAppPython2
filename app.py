@@ -428,7 +428,8 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
 
-elif menu == "📋 Reportes de Cultos de Célula":
+    # ================= REPORTES DE CULTOS DE CÉLULA =================
+    elif menu == "📋 Reportes de Cultos de Célula":
         st.subheader("Registrar Reporte de Culto de Célula")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_culto", clear_on_submit=True):
@@ -450,6 +451,7 @@ elif menu == "📋 Reportes de Cultos de Célula":
                 conn.commit()
                 conn.close()
                 st.success(f"¡Reporte del culto de la célula '{cell_name}' guardado exitosamente!")
+
 
 elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
