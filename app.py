@@ -256,7 +256,7 @@ if st.session_state['logged_in']:
 
 
 
-    elif menu == "📊 Panel de Control y Reportes":
+      elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
         conn = sqlite3.connect(DB_PATH)
         df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
@@ -317,7 +317,7 @@ if st.session_state['logged_in']:
         with kpi7: st.metric("Total Jóvenes", f"{total_jovenes}")
         with kpi8: st.metric("Total Adultos", f"{total_adultos}")
 
-               # --- Clasificación por edad y sexo ---
+        # --- Clasificación por edad y sexo ---
         def clasificar_edad(edad):
             if edad <= 12: return "Niños"
             elif edad <= 17: return "Adolescentes"
@@ -375,29 +375,3 @@ if st.session_state['logged_in']:
             st.bar_chart(crecimiento.set_index("Célula"))
         else:
             st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
-
-# --- Clasificación por edad y sexo ---
-    def clasificar_edad(edad):
-        if edad <= 12: return "Niños"
-        elif edad <= 17: return "Adolescentes"
-        elif edad <= 30: return "Jóvenes"
-        elif edad <= 60: return "Adultos"
-        else: return "Tercera Edad"
-
-    if not df_members.empty:
-        df_members["grupo_edad"] = df_members["age"].apply(clasificar_edad)
-        estadisticas = df_members.groupby(["grupo_edad","sex"])["full_name"].count().reset_index()
-        st.markdown("### 📈 Distribución por Edad y Sexo")
-        st.dataframe(estadisticas)
-
-        # Estado espiritual
-        if "discipleship_type" in df_members.columns:
-            espirituales = df_members.groupby("discipleship_type")["full_name"].count().reset_index()
-            st.markdown("### ✝️ Estado Espiritual (Bautizado / Catecúmeno)")
-            st.dataframe(espirituales)
-
-    # --- Descarriados ---
-    st.metric("Miembros Descarriados", f"{total_descarriados}")
-    if not df_descarriados.empty:
-        st.markdown("### 🚨 Lista de Descarriados")
-        st.dataframe(df_descarriados)
