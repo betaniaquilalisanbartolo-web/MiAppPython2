@@ -47,7 +47,7 @@ def obtener_nombres_celulas():
 
 init_db()
 
-# --- LOGIN ---
+# --- LOGIN Y REGISTRO ---
 st.sidebar.subheader("🔑 Ingreso de Líder")
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
@@ -67,6 +67,26 @@ if not st.session_state['logged_in']:
             st.success(f"Bienvenido líder {username}")
         else:
             st.error("Usuario o contraseña incorrectos")
+
+    # 🔐 Registrar líder disponible ANTES de login
+    st.subheader("Registrar Nuevo Líder")
+    with st.form("form_registro_lider", clear_on_submit=True):
+        new_user = st.text_input("Nuevo Usuario")
+        new_pass = st.text_input("Nueva Contraseña", type="password")
+        if st.form_submit_button("Crear Cuenta"):
+            if new_user.strip() and new_pass.strip():
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                try:
+                    c.execute("INSERT INTO leaders (username, password) VALUES (?, ?)", (new_user.strip(), new_pass.strip()))
+                    conn.commit()
+                    st.success(f"¡Cuenta creada para '{new_user}'! Ahora puedes iniciar sesión.")
+                except sqlite3.IntegrityError:
+                    st.error("Ese usuario ya existe.")
+                conn.close()
+            else:
+                st.error("Usuario y contraseña no pueden estar vacíos.")
+
 else:
     st.sidebar.success(f"Conectado como {st.session_state['username']}")
     if st.sidebar.button("Cerrar sesión"):
@@ -83,8 +103,7 @@ if st.session_state['logged_in']:
             "➕ Registro de Célula",
             "👥 Registro de Miembros por Célula",
             "📝 Formularios",
-            "📊 Panel de Control y Reportes",
-            "🔐 Registrar Líder"
+            "📊 Panel de Control y Reportes"
         ]
     )
 
@@ -169,14 +188,4 @@ if st.session_state['logged_in']:
             st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
 
         with kpi3:
-            miembros_activos = len(df_members[df_members['status'] == 'activo']) if not df_members.empty else 0
-            st.metric("Miembros Activos", f"{miembros_activos} personas")
-
-        with kpi4:
-            total_asistencia = (
-                df_cell_mes['adults'].sum() + df_cell_mes['youth'].sum() + df_cell_mes['children'].sum()
-            ) if not df_cell_mes.empty else 0
-            st.metric("Asistencia del Mes", f"{total_asistencia} asistencias")
-
-        st.markdown("### 📌 Reportes de Células")
-        st
+            miembros_activos = len(df_members[df_members['status'] == '
