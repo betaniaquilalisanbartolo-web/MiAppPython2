@@ -189,7 +189,4 @@ if st.session_state['logged_in']:
 
     # ================= REGISTRO DE LÍDER =================
     elif menu == "🔐 Registrar Líder":
-        st.subheader("Registrar Nuevo Líder")
-        with st.form("form_registro_lider", clear_on_submit=True):
-            username = st.text_input("Usuario del Líder")
-            password = st.text_input("Contraseña", type="password")
+        st.subheader("Registrar Nuevo Líder
