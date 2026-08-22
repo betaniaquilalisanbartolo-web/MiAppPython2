@@ -177,7 +177,7 @@ if st.session_state['logged_in']:
                 st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
 
     # --- Registro de Descarriados ---
-elif menu == "🚨 Registro de Descarriados":
+    elif menu == "🚨 Registro de Descarriados":
     st.subheader("Registrar Miembro Descarriado")
     lista_celulas = obtener_nombres_celulas()
     with st.form("form_descarriados", clear_on_submit=True):
@@ -225,7 +225,7 @@ elif menu == "📝 Registro de Nuevos Convertidos":
 
 
         # ================= REPORTES DE CULTOS DE CÉLULA =================
-    elif menu == "📋 Reportes de Cultos de Célula":
+        elif menu == "📋 Reportes de Cultos de Célula":
         st.subheader("Registrar Reporte de Culto de Célula")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_culto", clear_on_submit=True):
