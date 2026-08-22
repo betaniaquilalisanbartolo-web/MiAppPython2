@@ -144,6 +144,11 @@ if st.session_state['logged_in']:
     st.title("⛪ Sistema de Gestión de Células y Miembros")
 
     # Menú principal
+  if st.session_state['logged_in']:
+    st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
+    st.title("⛪ Sistema de Gestión de Células y Miembros")
+
+    # Menú principal
     menu = st.selectbox(
         "Selecciona una sección",
         [
@@ -208,62 +213,81 @@ if st.session_state['logged_in']:
     # ================= REPORTES DE CULTOS DE CÉLULA =================
     elif menu == "📋 Reportes de Cultos de Célula":
         st.subheader("Reportes de Cultos de Célula")
-        # aquí va tu bloque de cultos
-        pass  # evita error si aún no implementas
+        conn = sqlite3.connect(DB_PATH)
+        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+        conn.close()
+        if not df_cell.empty:
+            st.dataframe(df_cell)
+        else:
+            st.info("No hay reportes de cultos registrados aún.")
 
     # ================= PANEL DE CONTROL =================
     elif menu == "📊 Panel de Control y Reportes":
-        st.subheader("Panel de Control y Reportes")
-        # aquí va tu bloque del panel
-        pass  # evita error si aún no implementas
+        st.subheader("📊 Panel de Análisis Automático de la Iglesia")
+        conn = sqlite3.connect(DB_PATH)
+        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+        df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
+        df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+        c = conn.cursor()
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='descarriados'")
+        if c.fetchone():
+            df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
+        else:
+            df_descarriados = pd.DataFrame()
+        conn.close()
 
-    # ================= REGISTRO DE DESCARRIADOS =================
-    elif menu == "🚨 Registro de Descarriados":
-        st.subheader("Registrar Miembro Descarriado")
-        lista_celulas = obtener_nombres_celulas()
-        with st.form("form_descarriados", clear_on_submit=True):
-            full_name = st.text_input("Nombre Completo")
-            cell = st.selectbox("Célula", lista_celulas)
-            fecha_desercion = st.date_input("Fecha de Deserción")
-            motivo = st.text_area("Motivo de Deserción (opcional)")
+        hoy = datetime.date.today()
+        mes_actual = hoy.month
+        anio_actual = hoy.year
 
-            if st.form_submit_button("Guardar Descarriado"):
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute('''CREATE TABLE IF NOT EXISTS descarriados (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                    full_name TEXT, 
-                    cell TEXT, 
-                    fecha_desercion TEXT, 
-                    motivo TEXT
-                )''')
-                c.execute("INSERT INTO descarriados (full_name, cell, fecha_desercion, motivo) VALUES (?, ?, ?, ?)",
-                          (full_name, cell, fecha_desercion, motivo))
-                # Actualizar estado en members_stats
-                c.execute("UPDATE members_stats SET status='desertado' WHERE full_name=? AND cell=?", (full_name, cell))
-                conn.commit()
-                conn.close()
-                st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
+        # --- Reportes de cultos por mes ---
+        if not df_cell.empty and 'meeting_date' in df_cell.columns:
+            df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
+            df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
+        else:
+            df_cell_mes = pd.DataFrame()
 
+        # --- Convertidos por mes ---
+        if not df_converts.empty and 'conversion_date' in df_converts.columns:
+            df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
+            df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
+        else:
+            df_converts_mes = pd.DataFrame()
 
+        # --- Discipulado por célula ---
+        if not df_members.empty and 'discipleship_type' in df_members.columns:
+            discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
+        else:
+            discipulado_mes = pd.DataFrame()
 
-    # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
-    elif menu == "📝 Registro de Nuevos Convertidos":
-        st.subheader("Registrar Nuevos Convertidos")
-        # aquí va tu bloque de convertidos
-        pass  # evita error si aún no implementas
+        # --- KPIs ---
+        total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
+        total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
+        total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
+        total_asistencia = df_cell_mes[['adults','youth','children']].sum().sum() if not df_cell_mes.empty else 0
+        total_descarriados = len(df_descarriados) if not df_descarriados.empty else 0
 
-    # ================= REPORTES DE CULTOS DE CÉLULA =================
-    elif menu == "📋 Reportes de Cultos de Célula":
-        st.subheader("Reportes de Cultos de Célula")
-        # aquí va tu bloque de cultos
-        pass  # evita error si aún no implementas
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        with kpi1: st.metric("Ofrenda del Mes", f"${total_ofrenda_mes:,.2f}")
+        with kpi2: st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
+        with kpi3: st.metric("En Discipulado", f"{total_discipulado_mes} personas")
+        with kpi4: st.metric("Asistencia del Mes", f"{total_asistencia} asistencias")
 
-    # ================= PANEL DE CONTROL =================
-    elif menu == "📊 Panel de Control y Reportes":
-        st.subheader("Panel de Control y Reportes")
-        # aquí va tu bloque del panel
-        pass  # evita error si aún no implementas
+        st.metric("Miembros Descarriados", f"{total_descarriados}")
+
+        # --- Tablas detalladas ---
+        st.markdown("### 📌 Reportes de Células (Mes Actual)")
+        st.dataframe(df_cell_mes)
+
+        st.markdown("### 👤 Nuevos Convertidos (Mes Actual)")
+        st.dataframe(df_converts_mes)
+
+        st.markdown("### 📖 Miembros en Discipulado")
+        st.dataframe(discipulado_mes)
+
+        if not df_descarriados.empty:
+            st.markdown("### 🚨 Lista de Descarriados")
+            st.dataframe(df_descarriados)
 
     # ================= REGISTRO DE DESCARRIADOS =================
     elif menu == "🚨 Registro de Descarriados":
