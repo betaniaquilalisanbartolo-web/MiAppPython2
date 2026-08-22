@@ -158,6 +158,30 @@ elif menu == "📊 Panel de Control y Reportes":
     df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
     conn.close()
 
+    import datetime
+
+hoy = datetime.date.today()
+mes_actual = hoy.month
+anio_actual = hoy.year
+
+# Convertir columnas de fecha solo si existen y no están vacías
+if not df_cell.empty and 'meeting_date' in df_cell.columns:
+    df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
+    df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
+else:
+    df_cell_mes = pd.DataFrame()
+
+if not df_converts.empty and 'conversion_date' in df_converts.columns:
+    df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
+    df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
+else:
+    df_converts_mes = pd.DataFrame()
+
+# KPIs mensuales
+total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
+total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
+
+
     # KPIs
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
