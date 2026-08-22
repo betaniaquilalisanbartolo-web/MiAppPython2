@@ -150,7 +150,34 @@ menu = st.selectbox(
     ]
 )
 
- elif menu == "🚨 Registro de Descarriados":
+if st.session_state['logged_in']:
+    st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
+    st.title("⛪ Sistema de Gestión de Células y Miembros")
+
+    menu = st.selectbox(
+        "Selecciona una sección",
+        [
+            "👥 Registro de Miembros por Célula",
+            "📝 Registro de Nuevos Convertidos",
+            "📋 Reportes de Cultos de Célula",
+            "📊 Panel de Control y Reportes",
+            "🚨 Registro de Descarriados"   # <-- aquí estaba faltando
+        ]
+        )
+
+    if menu == "👥 Registro de Miembros por Célula":
+        # bloque de miembros
+
+    elif menu == "📝 Registro de Nuevos Convertidos":
+        # bloque de convertidos
+
+    elif menu == "📋 Reportes de Cultos de Célula":
+        # bloque de cultos
+
+    elif menu == "📊 Panel de Control y Reportes":
+        # bloque del panel
+
+    elif menu == "🚨 Registro de Descarriados":
         st.subheader("Registrar Miembro Descarriado")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_descarriados", clear_on_submit=True):
