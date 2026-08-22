@@ -44,6 +44,12 @@ def obtener_nombres_celulas():
         lista_celulas = ["Célula Central", "Célula de Jóvenes", "Célula de Damas"]
     return lista_celulas
 
+menu = st.sidebar.selectbox(
+    "Selecciona una sección",
+    ["➕ Registro de Célula", "👥 Registro de Miembros por Célula", "📝 Formularios", "📊 Panel de Control y Reportes"]
+)
+
+
 init_db()
 
 # --- INTERFAZ DE STREAMLIT ---
@@ -182,3 +188,23 @@ elif menu == "📊 Panel de Control y Reportes":
 
     st.markdown("### 📈 Miembros")
     st.dataframe(df_members)
+
+import datetime
+
+# Obtener mes y año actual
+hoy = datetime.date.today()
+mes_actual = hoy.month
+anio_actual = hoy.year
+
+# Convertir columnas de fecha a datetime
+df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
+df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
+
+# Filtrar registros del mes actual
+df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
+df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
+
+# KPIs mensuales
+total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
+total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
+
