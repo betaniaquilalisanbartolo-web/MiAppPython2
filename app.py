@@ -231,28 +231,29 @@ if st.session_state['logged_in']:
 
 
 
-elif menu == "📋 Reportes de Cultos de Célula":
-    st.subheader("Registrar Reporte de Culto de Célula")
-    lista_celulas = obtener_nombres_celulas()
-    with st.form("form_culto", clear_on_submit=True):
-        cell_name = st.selectbox("Célula", lista_celulas)
-        meeting_date = st.date_input("Fecha del Culto")
-        adults = st.number_input("Adultos", min_value=0)
-        youth = st.number_input("Jóvenes", min_value=0)
-        children = st.number_input("Niños", min_value=0)
-        friends = st.number_input("Amigos Invitados", min_value=0)
-        offering = st.number_input("Ofrenda", min_value=0.0, format="%.2f")
+    elif menu == "📋 Reportes de Cultos de Célula":
+        st.subheader("Registrar Reporte de Culto de Célula")
+        lista_celulas = obtener_nombres_celulas()
+        with st.form("form_culto", clear_on_submit=True):
+            cell_name = st.selectbox("Célula", lista_celulas)
+            meeting_date = st.date_input("Fecha del Culto")
+            adults = st.number_input("Adultos", min_value=0)
+            youth = st.number_input("Jóvenes", min_value=0)
+            children = st.number_input("Niños", min_value=0)
+            friends = st.number_input("Amigos Invitados", min_value=0)
+            offering = st.number_input("Ofrenda", min_value=0.0, format="%.2f")
 
-        if st.form_submit_button("Guardar Reporte"):
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute('''INSERT INTO cell_reports 
-                (cell_name, meeting_date, adults, youth, children, friends, offering) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)''',
-                (cell_name, meeting_date, adults, youth, children, friends, offering))
-            conn.commit()
-            conn.close()
-            st.success(f"¡Reporte del culto de la célula '{cell_name}' guardado exitosamente!")
+            if st.form_submit_button("Guardar Reporte"):
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute('''INSERT INTO cell_reports 
+                    (cell_name, meeting_date, adults, youth, children, friends, offering) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                    (cell_name, meeting_date, adults, youth, children, friends, offering))
+                conn.commit()
+                conn.close()
+                st.success(f"¡Reporte del culto de la célula '{cell_name}' guardado exitosamente!")
+
 
 
 elif menu == "📊 Panel de Control y Reportes":
