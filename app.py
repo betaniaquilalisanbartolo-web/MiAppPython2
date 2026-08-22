@@ -317,7 +317,7 @@ if st.session_state['logged_in']:
         with kpi7: st.metric("Total Jóvenes", f"{total_jovenes}")
         with kpi8: st.metric("Total Adultos", f"{total_adultos}")
 
-        # --- Clasificación por edad y sexo ---
+               # --- Clasificación por edad y sexo ---
         def clasificar_edad(edad):
             if edad <= 12: return "Niños"
             elif edad <= 17: return "Adolescentes"
@@ -331,6 +331,7 @@ if st.session_state['logged_in']:
             st.markdown("### 📈 Distribución por Edad y Sexo")
             st.dataframe(estadisticas)
 
+            # Estado espiritual
             if "discipleship_type" in df_members.columns:
                 espirituales = df_members.groupby("discipleship_type")["full_name"].count().reset_index()
                 st.markdown("### ✝️ Estado Espiritual (Bautizado / Catecúmeno)")
