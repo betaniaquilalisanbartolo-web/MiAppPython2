@@ -165,7 +165,7 @@ if st.session_state['logged_in']:
         ]
         )
 
-    if menu == "👥 Registro de Miembros por Célula":
+ if menu == "👥 Registro de Miembros por Célula":
         # bloque de miembros
 
  elif menu == "📝 Registro de Nuevos Convertidos":
