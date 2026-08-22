@@ -187,7 +187,6 @@ if st.session_state['logged_in']:
         st.markdown("### 📈 Miembros")
         st.dataframe(df_members)
 
-    # ================= REGISTRO DE LÍDER =================
   elif menu == "🔐 Registrar Líder":
     st.subheader("Registrar Nuevo Líder")
     with st.form("form_registro_lider", clear_on_submit=True):
