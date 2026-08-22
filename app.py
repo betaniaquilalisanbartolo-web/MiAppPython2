@@ -194,15 +194,21 @@ if st.session_state['logged_in']:
 
     # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
     elif menu == "📝 Registro de Nuevos Convertidos":
-        # aquí va el bloque de convertidos
+        st.subheader("Registrar Nuevos Convertidos")
+        # aquí va tu bloque de convertidos
+        pass  # evita error si aún no implementas
 
     # ================= REPORTES DE CULTOS DE CÉLULA =================
     elif menu == "📋 Reportes de Cultos de Célula":
-        # aquí va el bloque de cultos
+        st.subheader("Reportes de Cultos de Célula")
+        # aquí va tu bloque de cultos
+        pass  # evita error si aún no implementas
 
     # ================= PANEL DE CONTROL =================
     elif menu == "📊 Panel de Control y Reportes":
-        # aquí va el bloque del panel
+        st.subheader("Panel de Control y Reportes")
+        # aquí va tu bloque del panel
+        pass  # evita error si aún no implementas
 
     # ================= REGISTRO DE DESCARRIADOS =================
     elif menu == "🚨 Registro de Descarriados":
@@ -232,9 +238,6 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
 
-
-
-
 elif menu == "📝 Registro de Nuevos Convertidos":
         st.subheader("Registrar Nuevos Convertidos")
         lista_celulas = obtener_nombres_celulas()
@@ -258,8 +261,6 @@ elif menu == "📝 Registro de Nuevos Convertidos":
                 conn.close()
                 st.success(f"¡Nuevo convertido '{full_name}' registrado en la célula '{assigned_cell}'!")
 
-
-
 elif menu == "📋 Reportes de Cultos de Célula":
         st.subheader("Registrar Reporte de Culto de Célula")
         lista_celulas = obtener_nombres_celulas()
@@ -282,8 +283,6 @@ elif menu == "📋 Reportes de Cultos de Célula":
                 conn.commit()
                 conn.close()
                 st.success(f"¡Reporte del culto de la célula '{cell_name}' guardado exitosamente!")
-
-
 
 elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
