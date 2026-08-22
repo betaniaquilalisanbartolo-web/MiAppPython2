@@ -133,18 +133,9 @@ else:
                     conn.close()
                 else:
                     st.error("Usuario y contraseña no pueden estar vacíos.")
-
+                    
 # --- CONTENIDO SOLO SI ESTÁ LOGUEADO ---
 if st.session_state['logged_in']:
-    st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
-    st.title("⛪ Sistema de Gestión de Células y Miembros")
-    
-if st.session_state['logged_in']:
-    st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
-    st.title("⛪ Sistema de Gestión de Células y Miembros")
-
-    # Menú principal
-  if st.session_state['logged_in']:
     st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
     st.title("⛪ Sistema de Gestión de Células y Miembros")
 
@@ -240,31 +231,11 @@ if st.session_state['logged_in']:
         mes_actual = hoy.month
         anio_actual = hoy.year
 
-        # --- Reportes de cultos por mes ---
-        if not df_cell.empty and 'meeting_date' in df_cell.columns:
-            df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
-            df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
-        else:
-            df_cell_mes = pd.DataFrame()
-
-        # --- Convertidos por mes ---
-        if not df_converts.empty and 'conversion_date' in df_converts.columns:
-            df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
-            df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
-        else:
-            df_converts_mes = pd.DataFrame()
-
-        # --- Discipulado por célula ---
-        if not df_members.empty and 'discipleship_type' in df_members.columns:
-            discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
-        else:
-            discipulado_mes = pd.DataFrame()
-
-        # --- KPIs ---
-        total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
-        total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
-        total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
-        total_asistencia = df_cell_mes[['adults','youth','children']].sum().sum() if not df_cell_mes.empty else 0
+        # KPIs
+        total_ofrenda_mes = df_cell['offering'].sum() if not df_cell.empty else 0.0
+        total_convertidos_mes = len(df_converts) if not df_converts.empty else 0
+        total_discipulado_mes = len(df_members[df_members['discipleship_type']=="Sí"]) if not df_members.empty else 0
+        total_asistencia = df_cell[['adults','youth','children']].sum().sum() if not df_cell.empty else 0
         total_descarriados = len(df_descarriados) if not df_descarriados.empty else 0
 
         kpi1, kpi2, kpi3, kpi4 = st.columns(4)
@@ -272,19 +243,15 @@ if st.session_state['logged_in']:
         with kpi2: st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
         with kpi3: st.metric("En Discipulado", f"{total_discipulado_mes} personas")
         with kpi4: st.metric("Asistencia del Mes", f"{total_asistencia} asistencias")
-
         st.metric("Miembros Descarriados", f"{total_descarriados}")
 
-        # --- Tablas detalladas ---
-        st.markdown("### 📌 Reportes de Células (Mes Actual)")
-        st.dataframe(df_cell_mes)
-
-        st.markdown("### 👤 Nuevos Convertidos (Mes Actual)")
-        st.dataframe(df_converts_mes)
-
+        # Tablas
+        st.markdown("### 📌 Reportes de Células")
+        st.dataframe(df_cell)
+        st.markdown("### 👤 Nuevos Convertidos")
+        st.dataframe(df_converts)
         st.markdown("### 📖 Miembros en Discipulado")
-        st.dataframe(discipulado_mes)
-
+        st.dataframe(df_members[df_members['discipleship_type']=="Sí"])
         if not df_descarriados.empty:
             st.markdown("### 🚨 Lista de Descarriados")
             st.dataframe(df_descarriados)
@@ -311,11 +278,11 @@ if st.session_state['logged_in']:
                 )''')
                 c.execute("INSERT INTO descarriados (full_name, cell, fecha_desercion, motivo) VALUES (?, ?, ?, ?)",
                           (full_name, cell, fecha_desercion, motivo))
-                # Actualizar estado en members_stats
                 c.execute("UPDATE members_stats SET status='desertado' WHERE full_name=? AND cell=?", (full_name, cell))
                 conn.commit()
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
+
 
 elif menu == "📝 Registro de Nuevos Convertidos":
         st.subheader("Registrar Nuevos Convertidos")
