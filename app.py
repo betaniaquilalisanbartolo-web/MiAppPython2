@@ -434,7 +434,6 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Reporte del culto de la célula '{cell_name}' guardado exitosamente!")
 
-
 elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
         conn = sqlite3.connect(DB_PATH)
