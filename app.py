@@ -154,6 +154,7 @@ if st.session_state['logged_in']:
     st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
     st.title("⛪ Sistema de Gestión de Células y Miembros")
 
+    # Menú principal
     menu = st.selectbox(
         "Selecciona una sección",
         [
@@ -161,72 +162,18 @@ if st.session_state['logged_in']:
             "📝 Registro de Nuevos Convertidos",
             "📋 Reportes de Cultos de Célula",
             "📊 Panel de Control y Reportes",
-            "🚨 Registro de Descarriados"   # <-- aquí estaba faltando
+            "🚨 Registro de Descarriados"
         ]
-        )
-
-
-
+    )
 
     # ================= REGISTRO DE MIEMBROS POR CÉLULA =================
-if menu == "👥 Registro de Miembros por Célula":
+    if menu == "👥 Registro de Miembros por Célula":
         st.subheader("Registrar Miembros en una Célula")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_miembros_celula", clear_on_submit=True):
             full_name = st.text_input("Nombre Completo")
             age = st.number_input("Edad", min_value=1, max_value=120)
             phone = st.text_input("Teléfono")
-            
-elif menu == "👥 Registro de Miembros por Célula":
-    # bloque de miembros
-
-elif menu == "📝 Registro de Nuevos Convertidos":
-    # bloque de convertidos
-
-elif menu == "📋 Reportes de Cultos de Célula":
-    # bloque de cultos
-
-elif menu == "📊 Panel de Control y Reportes":
-    # bloque del panel
-
-elif menu == "🚨 Registro de Descarriados":
-    st.subheader("Registrar Miembro Descarriado")
-    lista_celulas = obtener_nombres_celulas()
-    with st.form("form_descarriados", clear_on_submit=True):
-        full_name = st.text_input("Nombres y Apellidos")
-        age = st.number_input("Edad", min_value=1, max_value=120)
-        fecha_desercion = st.date_input("Fecha de Deserción")
-        motivo = st.text_area("Motivo de Deserción (opcional)")
-
-        if st.form_submit_button("Guardar Descarriado"):
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            # Crear tabla si no existe
-            c.execute('''CREATE TABLE IF NOT EXISTS descarriados (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                full_name TEXT, 
-                age INTEGER,
-                cell TEXT, 
-                fecha_desercion TEXT, 
-                motivo TEXT
-            )''')
-
-            # Buscar célula automáticamente en members_stats
-            c.execute("SELECT cell FROM members_stats WHERE full_name=?", (full_name,))
-            result = c.fetchone()
-            cell = result[0] if result else "No asignada"
-
-            # Insertar en descarriados
-            c.execute("INSERT INTO descarriados (full_name, age, cell, fecha_desercion, motivo) VALUES (?, ?, ?, ?, ?)",
-                      (full_name, age, cell, fecha_desercion, motivo))
-
-            # Actualizar estado en members_stats
-            c.execute("UPDATE members_stats SET status='desertado' WHERE full_name=?", (full_name,))
-            conn.commit()
-            conn.close()
-
-            st.success(f"¡Miembro '{full_name}' registrado como descarriado en la célula '{cell}'!")
-
             cell = st.selectbox("Célula", lista_celulas)
             sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
             discipulado = st.radio("¿Está siendo discipulado?", ["Sí", "No"])
@@ -245,8 +192,20 @@ elif menu == "🚨 Registro de Descarriados":
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
 
-    # --- Registro de Descarriados ---
-elif menu == "🚨 Registro de Descarriados":
+    # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
+    elif menu == "📝 Registro de Nuevos Convertidos":
+        # aquí va el bloque de convertidos
+
+    # ================= REPORTES DE CULTOS DE CÉLULA =================
+    elif menu == "📋 Reportes de Cultos de Célula":
+        # aquí va el bloque de cultos
+
+    # ================= PANEL DE CONTROL =================
+    elif menu == "📊 Panel de Control y Reportes":
+        # aquí va el bloque del panel
+
+    # ================= REGISTRO DE DESCARRIADOS =================
+    elif menu == "🚨 Registro de Descarriados":
         st.subheader("Registrar Miembro Descarriado")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_descarriados", clear_on_submit=True):
@@ -254,7 +213,7 @@ elif menu == "🚨 Registro de Descarriados":
             cell = st.selectbox("Célula", lista_celulas)
             fecha_desercion = st.date_input("Fecha de Deserción")
             motivo = st.text_area("Motivo de Deserción (opcional)")
-            
+
             if st.form_submit_button("Guardar Descarriado"):
                 conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
@@ -272,6 +231,7 @@ elif menu == "🚨 Registro de Descarriados":
                 conn.commit()
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
+
 
 
 
