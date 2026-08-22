@@ -245,7 +245,7 @@ elif menu == "🚨 Registro de Descarriados":
 
 
 
-    elif menu == "📝 Registro de Nuevos Convertidos":
+elif menu == "📝 Registro de Nuevos Convertidos":
         st.subheader("Registrar Nuevos Convertidos")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_convertidos", clear_on_submit=True):
