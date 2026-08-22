@@ -187,5 +187,21 @@ if st.session_state['logged_in']:
         with kpi2:
             st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
 
-        with kpi3:
-            miembros_activos = len(df_members[df_members['status'] == '
+                with kpi3:
+            miembros_activos = len(df_members[df_members['status'] == 'activo']) if not df_members.empty else 0
+            st.metric("Miembros Activos", f"{miembros_activos} personas")
+
+        with kpi4:
+            total_asistencia = (
+                df_cell_mes['adults'].sum() + df_cell_mes['youth'].sum() + df_cell_mes['children'].sum()
+            ) if not df_cell_mes.empty else 0
+            st.metric("Asistencia del Mes", f"{total_asistencia} asistencias")
+
+        st.markdown("### 📌 Reportes de Células")
+        st.dataframe(df_cell_mes)
+
+        st.markdown("### 👤 Nuevos Convertidos")
+        st.dataframe(df_converts_mes)
+
+        st.markdown("### 📈 Miembros")
+        st.dataframe(df_members)
