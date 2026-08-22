@@ -150,7 +150,7 @@ menu = st.selectbox(
     ]
 )
 
-elif menu == "🚨 Registro de Descarriados":
+  elif menu == "🚨 Registro de Descarriados":
         st.subheader("Registrar Miembro Descarriado")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_descarriados", clear_on_submit=True):
