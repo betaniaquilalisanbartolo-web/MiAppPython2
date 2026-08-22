@@ -50,7 +50,7 @@ init_db()
 st.set_page_config(page_title="Gestión de Iglesia", layout="wide")
 st.title("⛪ Sistema de Gestión de Células y Miembros")
 
-menu = st.sidebar.selectbox("Selecciona una sección", ["📝 Formularios", "📊 Panel de Control y Reportes", "➕ Registro de Célula"])
+menu = st.sidebar.selectbox("Selecciona una sección", ["➕ Registro de Célula", "📝 Formularios", "📊 Panel de Control y Reportes"])
 
 # ================= REGISTRO DE CÉLULA =================
 if menu == "➕ Registro de Célula":
@@ -97,14 +97,88 @@ elif menu == "📝 Formularios":
             spiritual_level = st.selectbox("Nivel Espiritual", ["Oración", "Gozo", "Comunión", "Adoración"])
             attendance_level = st.slider("Nivel de Asistencia", 1, 10, 5)
 
-           if st.form_submit_button("Guardar Estadísticas"):
+            if st.form_submit_button("Guardar Reporte"):
                 conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
-                c.execute('''INSERT INTO members_stats (full_name, cell, sex, growth_eval, discipleship_type, ministry) VALUES (?, ?, ?, ?, ?, ?)''',
-                          (full_name, cell, sex, growth_eval, discipleship_type, ministry))
+                c.execute('''INSERT INTO cell_reports (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                          (celula_seleccionada, str(meeting_date), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
                 conn.commit()
                 conn.close()
-                st.success("¡Estadísticas de miembro guardadas!")
+                st.success(f"¡Reporte de la célula '{celula_seleccionada}' guardado exitosamente!")
 
-# ================= PANEL DE CONTROL =================
-elif menu == "📊 Panel de Control y Reportes
+    # --- Nuevo convertido ---
+    with pestana2:
+        st.subheader("Registrar Nuevo Convertido")
+        lista_celulas_convertidos = obtener_nombres_celulas()
+        with st.form("form_convertido", clear_on_submit=True):
+            full_name = st.text_input("Nombre Completo")
+            contact = st.text_input("Contacto / Teléfono")
+            address = st.text_area("Dirección")
+            birth_date = st.date_input("Fecha de Nacimiento")
+            age = st.number_input("Edad", min_value=0, step=1)
+            status = st.text_input("Estado", value="Nuevo")
+            conversion_date = st.date_input("Fecha de Conversión")
+            decision_type = st.selectbox("Tipo de Decisión", ["Primera vez", "Reconciliación", "Petición de Oración"])
+            assigned_cell = st.selectbox("Célula Asignada", lista_celulas_convertidos)
+            observation = st.text_area("Observaciones")
+
+            if st.form_submit_button("Guardar Convertido"):
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute('''INSERT INTO new_converts (full_name, contact, address, birth_date, age, status, conversion_date, decision_type, assigned_cell, observation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                          (full_name, contact, address, str(birth_date), age, status, str(conversion_date), decision_type, assigned_cell, observation))
+                conn.commit()
+                conn.close()
+                st.success("¡Nuevo convertido guardado con éxito!")
+
+    # --- Miembro ---
+    with pestana3:
+        st.subheader("Estadísticas de Miembro")
+        lista_celulas_miembros = obtener_nombres_celulas()
+        with st.form("form_miembro", clear_on_submit=True):
+            full_name = st.text_input("Nombre Completo del Miembro")
+            cell = st.selectbox("Célula a la que Pertenece", lista_celulas_miembros)
+            sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
+            growth_eval = st.slider("Evaluación de Crecimiento", 1, 10, 5)
+            discipleship_type = st.text_input("Tipo de Discipulado")
+            ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
+
+          # ================= PANEL DE CONTROL =================
+elif menu == "📊 Panel de Control y Reportes":
+    st.subheader("📊 Panel de Análisis Automático de la Iglesia")
+    conn = sqlite3.connect(DB_PATH)
+    df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+    df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
+    df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+    conn.close()
+
+    # KPIs
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+
+    with kpi1:
+        total_ofrenda = df_cell['offering'].sum() if not df_cell.empty else 0.0
+        st.metric("Total Ofrendas", f"${total_ofrenda:,.2f}")
+
+    with kpi2:
+        total_nuevos = len(df_converts) if not df_converts.empty else 0
+        st.metric("Nuevos Convertidos", f"{total_nuevos} personas")
+
+    with kpi3:
+        miembros_activos = len(df_members[df_members['status'] == 'activo']) if not df_members.empty else 0
+        st.metric("Miembros Activos", f"{miembros_activos} personas")
+
+    with kpi4:
+        total_asistencia = (
+            df_cell['adults'].sum() + df_cell['youth'].sum() + df_cell['children'].sum()
+        ) if not df_cell.empty else 0
+        st.metric("Impacto Total Asistencia", f"{total_asistencia} asistencias")
+
+    # Mostrar tablas
+    st.markdown("### 📌 Reportes de Células")
+    st.dataframe(df_cell)
+
+    st.markdown("### 👤 Nuevos Convertidos")
+    st.dataframe(df_converts)
+
+    st.markdown("### 📈 Miembros")
+    st.dataframe(df_members)
