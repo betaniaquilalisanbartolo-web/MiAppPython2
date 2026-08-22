@@ -202,15 +202,41 @@ if st.session_state['logged_in']:
                 st.success(f"¡Nuevo convertido '{full_name}' registrado en la célula '{assigned_cell}'!")
 
     # ================= REPORTES DE CULTOS DE CÉLULA =================
-    elif menu == "📋 Reportes de Cultos de Célula":
-        st.subheader("Reportes de Cultos de Célula")
-        conn = sqlite3.connect(DB_PATH)
-        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
-        conn.close()
-        if not df_cell.empty:
-            st.dataframe(df_cell)
-        else:
-            st.info("No hay reportes de cultos registrados aún.")
+    with st.form("form_celula", clear_on_submit=True):
+            celula_seleccionada = st.selectbox("Selecciona el Nombre de la Célula", lista_opciones_celulas)
+            nombre_nueva_celula = st.text_input("Si seleccionaste 'Registrar Nueva Célula', escribe su nombre aquí:")
+            meeting_date = st.text_input("Fecha de Reunión (AAAA-MM-DD)")
+            col1, col2, col3 = st.columns(3)
+            adults = col1.number_input("Adultos", min_value=0, step=1)
+            youth = col2.number_input("Jóvenes", min_value=0, step=1)
+            children = col3.number_input("Niños", min_value=0, step=1)
+            friends = col1.number_input("Amigos", min_value=0, step=1)
+            visits = col2.number_input("Visitas", min_value=0, step=1)
+            house_leader = st.text_input("Líder de Casa")
+            biblical_theme = st.text_input("Tema Bíblico")
+            central_text = st.text_input("Texto Central")
+            offering = st.number_input("Ofrenda", min_value=0.0, step=1.0)
+            needs = st.text_area("Necesidades")
+            spiritual_level = st.selectbox("Nivel Espiritual", ["Bajo", "Medio", "Alto"])
+            attendance_level = st.slider("Nivel de Asistencia", 1, 10, 5)
+            
+            if st.form_submit_button("Guardar Reporte"):
+                if celula_seleccionada == "➕ Registrar Nueva Célula":
+                    cell_name_final = nombre_nueva_celula.strip()
+                else:
+                    cell_name_final = celula_seleccionada
+
+                if not cell_name_final:
+                    st.error("Por favor, introduce un nombre válido para la célula.")
+                else:
+                    conn = sqlite3.connect(DB_PATH)
+                    c = conn.cursor()
+                    c.execute('''INSERT INTO cell_reports (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                              (cell_name_final, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
+                    conn.commit()
+                    conn.close()
+                    st.success(f"¡Reporte de la célula '{cell_name_final}' guardado exitosamente!")
+                    st.rerun()
 
     # ================= PANEL DE CONTROL =================
     elif menu == "📊 Panel de Control y Reportes":
@@ -566,3 +592,50 @@ if st.session_state['logged_in']:
             st.bar_chart(crecimiento.set_index("Célula"))
         else:
             st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
+            elif menu == "📊 Panel de Control y Reportes":
+    st.subheader("📊 Panel de Análisis Automático de la Iglesia")
+    
+    conn = sqlite3.connect(DB_PATH)
+    df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+    df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
+    df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+    conn.close()
+
+    # --- 1. TARJETAS MÉTRICAS AUTOMÁTICAS (KPIs) ---
+    st.markdown("### 📈 Indicadores Clave del Sistema")
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    
+    with kpi1:
+        total_ofrenda = df_cell['offering'].sum() if not df_cell.empty else 0.0
+        st.metric("Total Ofrendas", f"${total_ofrenda:,.2f}")
+    with kpi2:
+        total_nuevos = len(df_converts)
+        st.metric("Nuevos Convertidos", f"{total_nuevos} personas")
+    with kpi3:
+        miembros_activos = len(df_members[df_members['status'] == 'activo']) if not df_members.empty else 0
+        st.metric("Miembros Activos", f"{miembros_activos} personas")
+    with kpi4:
+        total_asistencia = (df_cell['adults'].sum() + df_cell['youth'].sum() + df_cell['children'].sum()) if not df_cell.empty else 0
+        st.metric("Impacto Total Asistencia", f"{total_asistencia} asistencias")
+
+    st.markdown("---")
+
+    # --- 2. ANÁLISIS GRÁFICO DE CÉLULAS Y OFRENDAS ---
+    st.markdown("### 📊 Gráficos de Células y Finanzas")
+    grafico1, grafico2 = st.columns(2)
+
+    with grafico1:
+        st.write("🏃‍♂️ *Asistencia Acumulada por Edad/Rol*")
+        if not df_cell.empty:
+            data_asistencia = {
+                'Categoría': ['Adultos', 'Jóvenes', 'Niños', 'Amigos', 'Visitas'],
+                'Cantidad': [
+                    df_cell['adults'].sum(), df_cell['youth'].sum(), df_cell['children'].sum(),
+                    df_cell['friends'].sum(), df_cell['visits'].sum()
+                ]
+            }
+            st.bar_chart(data=pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
+        else:
+            st.info("Agrega reportes de células para visualizar métricas de asistencia.")
+
+    with grafico2:
