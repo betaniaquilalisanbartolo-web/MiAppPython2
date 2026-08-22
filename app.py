@@ -176,8 +176,8 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
 
-    # --- Registro de Descarriados ---
-    elif menu == "🚨 Registro de Descarriados":
+   # --- Registro de Descarriados ---
+elif menu == "🚨 Registro de Descarriados":
     st.subheader("Registrar Miembro Descarriado")
     lista_celulas = obtener_nombres_celulas()
     with st.form("form_descarriados", clear_on_submit=True):
@@ -185,11 +185,16 @@ if st.session_state['logged_in']:
         cell = st.selectbox("Célula", lista_celulas)
         fecha_desercion = st.date_input("Fecha de Deserción")
         motivo = st.text_area("Motivo de Deserción (opcional)")
+        
         if st.form_submit_button("Guardar Descarriado"):
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute('''CREATE TABLE IF NOT EXISTS descarriados (
-                id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT, cell TEXT, fecha_desercion TEXT, motivo TEXT
+                id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                full_name TEXT, 
+                cell TEXT, 
+                fecha_desercion TEXT, 
+                motivo TEXT
             )''')
             c.execute("INSERT INTO descarriados (full_name, cell, fecha_desercion, motivo) VALUES (?, ?, ?, ?)",
                       (full_name, cell, fecha_desercion, motivo))
@@ -198,6 +203,7 @@ if st.session_state['logged_in']:
             conn.commit()
             conn.close()
             st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
+
 
 # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
 elif menu == "📝 Registro de Nuevos Convertidos":
