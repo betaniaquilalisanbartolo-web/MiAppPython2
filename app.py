@@ -175,7 +175,9 @@ if menu == "👥 Registro de Miembros por Célula":
         with st.form("form_miembros_celula", clear_on_submit=True):
             full_name = st.text_input("Nombre Completo")
             age = st.number_input("Edad", min_value=1, max_value=120)
-            phone = st.text_input("Teléfono")if menu == "👥 Registro de Miembros por Célula":
+            phone = st.text_input("Teléfono")
+            
+elif menu == "👥 Registro de Miembros por Célula":
     # bloque de miembros
 
 elif menu == "📝 Registro de Nuevos Convertidos":
