@@ -186,4 +186,4 @@ if st.session_state['logged_in']:
             phone = st.text_input("Teléfono")
             address = st.text_input("Dirección")
             assigned_cell = st.selectbox("Célula Asignada", lista_celulas)
-            decision_type = st.radio("Tipo de Decisión
+            decision_type = st.radio("Tipo de
