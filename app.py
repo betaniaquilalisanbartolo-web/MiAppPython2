@@ -88,19 +88,22 @@ if st.session_state['logged_in']:
         ]
     )
 
-    # ================= REGISTRO DE CÉLULA =================
     if menu == "➕ Registro de Célula":
-        st.subheader("Registrar Nueva Célula")
-        with st.form("form_registro_celula", clear_on_submit=True):
-            cell_name = st.text_input("Nombre de la Célula")
-            leader = st.text_input("Nombre del Líder")
-            if st.form_submit_button("Guardar Célula"):
-                if cell_name.strip():
-                    conn = sqlite3.connect(DB_PATH)
-                    c = conn.cursor()
-                    try:
-                        c.execute("INSERT INTO cells (cell_name, leader) VALUES (?, ?)", (cell_name.strip(), leader))
-                        conn.commit()
-                        st.success(f"¡Célula '{cell_name}' registrada exitosamente!")
-                    except sqlite3.IntegrityError:
-                        st.error("Ya existe una célula con ese
+    st.subheader("Registrar Nueva Célula")
+    with st.form("form_registro_celula", clear_on_submit=True):
+        cell_name = st.text_input("Nombre de la Célula")
+        leader = st.text_input("Nombre del Líder")
+        if st.form_submit_button("Guardar Célula"):
+            if cell_name.strip():
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                try:
+                    c.execute("INSERT INTO cells (cell_name, leader) VALUES (?, ?)", (cell_name.strip(), leader))
+                    conn.commit()
+                    st.success(f"¡Célula '{cell_name}' registrada exitosamente!")
+                except sqlite3.IntegrityError:
+                    st.error("Ya existe una célula con ese nombre.")
+                conn.close()
+            else:
+                st.error("El nombre de la célula no puede estar vacío.")
+
