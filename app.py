@@ -199,22 +199,30 @@ elif menu == "🚨 Registro de Descarriados":
             conn.close()
             st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
 
-    # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
-  elif menu == "📝 Registro de Nuevos Convertidos":
-        st.subheader("Registrar Nuevos Convertidos")
-        lista_celulas = obtener_nombres_celulas()
-        with st.form("form_convertidos", clear_on_submit=True):
-            full_name = st.text_input("Nombres y Apellidos")
-            age = st.number_input("Edad", min_value=1, max_value=120)
-            phone = st.text_input("Teléfono")
-            address = st.text_input("Dirección")
-            assigned_cell = st.selectbox("Célula Asignada", lista_celulas)
-            decision_type = st.radio("Tipo de Decisión", ["Acepto", "Reconciliación"])
-            conversion_date = st.date_input("Fecha de la Decisión")
+# ================= REGISTRO DE NUEVOS CONVERTIDOS =================
+elif menu == "📝 Registro de Nuevos Convertidos":
+    st.subheader("Registrar Nuevos Convertidos")
+    lista_celulas = obtener_nombres_celulas()
+    with st.form("form_convertidos", clear_on_submit=True):
+        full_name = st.text_input("Nombres y Apellidos")
+        age = st.number_input("Edad", min_value=1, max_value=120)
+        phone = st.text_input("Teléfono")
+        address = st.text_input("Dirección")
+        assigned_cell = st.selectbox("Célula Asignada", lista_celulas)
+        decision_type = st.radio("Tipo de Decisión", ["Acepto", "Reconciliación"])
+        conversion_date = st.date_input("Fecha de la Decisión")
 
-            if st.form_submit_button("Guardar Convertido"):
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
+        if st.form_submit_button("Guardar Convertido"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()  # ✅ corregido, sin el punto
+            c.execute('''INSERT INTO new_converts 
+                (full_name, age, contact, address, assigned_cell, decision_type, conversion_date) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                (full_name, age, phone, address, assigned_cell, decision_type, conversion_date))
+            conn.commit()
+            conn.close()
+            st.success(f"¡Nuevo convertido '{full_name}' registrado en la célula '{assigned_cell}'!")
+
 
         # ================= REPORTES DE CULTOS DE CÉLULA =================
     elif menu == "📋 Reportes de Cultos de Célula":
