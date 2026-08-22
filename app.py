@@ -246,14 +246,14 @@ elif menu == "🚨 Registro de Descarriados":
                 conn.commit()
                 conn.close()
                 st.success(f"¡Reporte de culto registrado para la célula '{cell_name}'!")
-                
+
 elif menu == "📊 Panel de Control y Reportes":
     st.subheader("📊 Panel de Análisis Automático de la Iglesia")
     conn = sqlite3.connect(DB_PATH)
     df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
     df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
     df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
-    # Tabla de descarriados si existe
+    # Verificar si existe la tabla de descarriados
     c = conn.cursor()
     c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='descarriados'")
     if c.fetchone():
@@ -366,7 +366,3 @@ elif menu == "📊 Panel de Control y Reportes":
         st.bar_chart(crecimiento.set_index("Célula"))
     else:
         st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
-
-
-
-
