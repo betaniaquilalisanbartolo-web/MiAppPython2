@@ -150,6 +150,45 @@ if st.session_state['logged_in']:
         ]
     )
 
+        elif menu == "🚨 Registro de Descarriados":
+        st.subheader("Registrar Miembro Descarriado")
+        lista_celulas = obtener_nombres_celulas()
+        with st.form("form_descarriados", clear_on_submit=True):
+            full_name = st.text_input("Nombres y Apellidos")
+            age = st.number_input("Edad", min_value=1, max_value=120)
+            fecha_desercion = st.date_input("Fecha de Deserción")
+            motivo = st.text_area("Motivo de Deserción (opcional)")
+
+            if st.form_submit_button("Guardar Descarriado"):
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                # Crear tabla si no existe
+                c.execute('''CREATE TABLE IF NOT EXISTS descarriados (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    full_name TEXT, 
+                    age INTEGER,
+                    cell TEXT, 
+                    fecha_desercion TEXT, 
+                    motivo TEXT
+                )''')
+
+                # Buscar célula automáticamente en members_stats
+                c.execute("SELECT cell FROM members_stats WHERE full_name=?", (full_name,))
+                result = c.fetchone()
+                cell = result[0] if result else "No asignada"
+
+                # Insertar en descarriados
+                c.execute("INSERT INTO descarriados (full_name, age, cell, fecha_desercion, motivo) VALUES (?, ?, ?, ?, ?)",
+                          (full_name, age, cell, fecha_desercion, motivo))
+
+                # Actualizar estado en members_stats
+                c.execute("UPDATE members_stats SET status='desertado' WHERE full_name=?", (full_name,))
+                conn.commit()
+                conn.close()
+
+                st.success(f"¡Miembro '{full_name}' registrado como descarriado en la célula '{cell}'!")
+
+
     # ================= REGISTRO DE MIEMBROS POR CÉLULA =================
     if menu == "👥 Registro de Miembros por Célula":
         st.subheader("Registrar Miembros en una Célula")
@@ -316,6 +355,20 @@ if st.session_state['logged_in']:
         with kpi6: st.metric("Total Niños", f"{total_ninos}")
         with kpi7: st.metric("Total Jóvenes", f"{total_jovenes}")
         with kpi8: st.metric("Total Adultos", f"{total_adultos}")
+
+                # --- Control de Descarriados por Célula ---
+        if not df_descarriados.empty:
+            descarriados_por_celula = df_descarriados.groupby("cell")["full_name"].count().reset_index()
+            descarriados_por_celula.rename(columns={"full_name": "Total Descarriados"}, inplace=True)
+
+            st.markdown("### 🚨 Descarriados por Célula")
+            st.dataframe(descarriados_por_celula)
+
+            # Gráfica de barras
+            st.bar_chart(descarriados_por_celula.set_index("cell"))
+        else:
+            st.info("No hay miembros descarriados registrados por célula.")
+
 
         # --- Clasificación por edad y sexo ---
         def clasificar_edad(edad):
