@@ -209,3 +209,73 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Reporte de culto registrado para la célula '{cell_name}'!")
 
+
+    elif menu == "📊 Panel de Control y Reportes":
+        st.subheader("📊 Panel de Análisis Automático de la Iglesia")
+        conn = sqlite3.connect(DB_PATH)
+        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+        df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
+        df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+        conn.close()
+
+        hoy = datetime.date.today()
+        mes_actual = hoy.month
+        anio_actual = hoy.year
+
+        # --- Reportes de cultos por mes ---
+        if not df_cell.empty and 'meeting_date' in df_cell.columns:
+            df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
+            df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
+        else:
+            df_cell_mes = pd.DataFrame()
+
+        # --- Convertidos por mes ---
+        if not df_converts.empty and 'conversion_date' in df_converts.columns:
+            df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
+            df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
+        else:
+            df_converts_mes = pd.DataFrame()
+
+        # --- Discipulado por célula ---
+        if not df_members.empty and 'discipleship_type' in df_members.columns:
+            discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
+        else:
+            discipulado_mes = pd.DataFrame()
+
+        # --- KPIs ---
+        total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
+        total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
+        total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
+
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+
+        with kpi1:
+            st.metric("Ofrenda del Mes", f"${total_ofrenda_mes:,.2f}")
+
+        with kpi2:
+            st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
+
+        with kpi3:
+            st.metric("En Discipulado", f"{total_discipulado_mes} personas")
+
+        with kpi4:
+            total_asistencia = (
+                df_cell_mes['adults'].sum() + df_cell_mes['youth'].sum() + df_cell_mes['children'].sum()
+            ) if not df_cell_mes.empty else 0
+            st.metric("Asistencia del Mes", f"{total_asistencia} asistencias")
+
+        # --- Tablas detalladas ---
+        st.markdown("### 📌 Reportes de Células (Mes Actual)")
+        st.dataframe(df_cell_mes)
+
+        st.markdown("### 👤 Nuevos Convertidos (Mes Actual)")
+        st.dataframe(df_converts_mes)
+
+        st.markdown("### 📖 Miembros en Discipulado")
+        st.dataframe(discipulado_mes)
+
+                
+
+
+
+
