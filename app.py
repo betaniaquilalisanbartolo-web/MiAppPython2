@@ -230,36 +230,30 @@ elif menu == "📝 Registro de Nuevos Convertidos":
             st.success(f"¡Nuevo convertido '{full_name}' registrado en la célula '{assigned_cell}'!")
 
 
-        # ================= REPORTES DE CULTOS DE CÉLULA =================
-        elif menu == "📋 Reportes de Cultos de Célula":
-        st.subheader("Registrar Reporte de Culto de Célula")
-        lista_celulas = obtener_nombres_celulas()
-        with st.form("form_culto", clear_on_submit=True):
-            cell_name = st.selectbox("Nombre de la Célula", lista_celulas)
-            meeting_date = st.date_input("Fecha de Reunión")
-            place = st.text_input("Lugar de Reunión")
-            adults = st.number_input("Número de Adultos", min_value=0)
-            youth = st.number_input("Número de Jóvenes (13-30)", min_value=0)
-            children = st.number_input("Número de Niños", min_value=0)
-            new_guests = st.number_input("Invitados Nuevos", min_value=0)
-            friends = st.number_input("Número de Amigos", min_value=0)
-            offering = st.number_input("Total de Ofrenda", min_value=0.0, format="%.2f")
-            biblical_theme = st.text_input("Tema Bíblico Compartido")
-            central_text = st.text_input("Versículo Clave")
-            needs = st.multiselect("Necesidades Detectadas", ["Oración", "Consejería", "Ayuda práctica", "Otros"])
-            plan = st.text_area("Plan de Multiplicación de la Célula")
-            ambiente = st.selectbox("Ambiente de la Reunión", ["Gozo", "Unidad", "Oración", "Otros"])
+       # ================= REPORTES DE CULTOS DE CÉLULA =================
+elif menu == "📋 Reportes de Cultos de Célula":
+    st.subheader("Registrar Reporte de Culto de Célula")
+    lista_celulas = obtener_nombres_celulas()
+    with st.form("form_culto", clear_on_submit=True):
+        cell_name = st.selectbox("Célula", lista_celulas)
+        meeting_date = st.date_input("Fecha del Culto")
+        adults = st.number_input("Adultos", min_value=0)
+        youth = st.number_input("Jóvenes", min_value=0)
+        children = st.number_input("Niños", min_value=0)
+        friends = st.number_input("Amigos Invitados", min_value=0)
+        offering = st.number_input("Ofrenda", min_value=0.0, format="%.2f")
 
-            if st.form_submit_button("Guardar Reporte"):
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute('''INSERT INTO cell_reports 
-                    (cell_name, meeting_date, adults, youth, children, friends, visits, offering, biblical_theme, central_text, needs, spiritual_level) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (cell_name, meeting_date, adults, youth, children, friends, new_guests, offering, biblical_theme, central_text, ", ".join(needs), ambiente))
-                conn.commit()
-                conn.close()
-                st.success(f"¡Reporte de culto registrado para la célula '{cell_name}'!")
+        if st.form_submit_button("Guardar Reporte"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute('''INSERT INTO cell_reports 
+                (cell_name, meeting_date, adults, youth, children, friends, offering) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                (cell_name, meeting_date, adults, youth, children, friends, offering))
+            conn.commit()
+            conn.close()
+            st.success(f"¡Reporte del culto de la célula '{cell_name}' guardado exitosamente!")
+
 
 elif menu == "📊 Panel de Control y Reportes":
     st.subheader("📊 Panel de Análisis Automático de la Iglesia")
