@@ -200,7 +200,8 @@ elif menu == "🚨 Registro de Descarriados":
             st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
 
     # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
-    elif menu == "📝 Registro de Nuevos Convertidos":
+  elif menu == "📝 Registro de Nuevos Convertidos":
+    pass
         st.subheader("Registrar Nuevos Convertidos")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_convertidos", clear_on_submit=True):
@@ -247,14 +248,16 @@ elif menu == "🚨 Registro de Descarriados":
                 conn.close()
                 st.success(f"¡Reporte de culto registrado para la célula '{cell_name}'!")
                 
-    elif menu == "📊 Panel de Control y Reportes":
+elif menu == "📊 Panel de Control y Reportes":
     st.subheader("📊 Panel de Análisis Automático de la Iglesia")
     conn = sqlite3.connect(DB_PATH)
     df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
     df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
     df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
-    df_descarriados = pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table' AND name='descarriados'", conn)
-    if not df_descarriados.empty:
+    # Tabla de descarriados si existe
+    c = conn.cursor()
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='descarriados'")
+    if c.fetchone():
         df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
     else:
         df_descarriados = pd.DataFrame()
@@ -264,24 +267,27 @@ elif menu == "🚨 Registro de Descarriados":
     mes_actual = hoy.month
     anio_actual = hoy.year
 
-    # --- KPIs básicos ---
+    # --- Reportes de cultos por mes ---
     if not df_cell.empty and 'meeting_date' in df_cell.columns:
         df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
         df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
     else:
         df_cell_mes = pd.DataFrame()
 
+    # --- Convertidos por mes ---
     if not df_converts.empty and 'conversion_date' in df_converts.columns:
         df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
         df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
     else:
         df_converts_mes = pd.DataFrame()
 
+    # --- Discipulado por célula ---
     if not df_members.empty and 'discipleship_type' in df_members.columns:
         discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
     else:
         discipulado_mes = pd.DataFrame()
 
+    # --- KPIs ---
     total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
     total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
     total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
@@ -328,6 +334,39 @@ elif menu == "🚨 Registro de Descarriados":
     if not df_descarriados.empty:
         st.markdown("### 🚨 Lista de Descarriados")
         st.dataframe(df_descarriados)
+
+    # --- Tablas detalladas ---
+    st.markdown("### 📌 Reportes de Células (Mes Actual)")
+    st.dataframe(df_cell_mes)
+
+    st.markdown("### 👤 Nuevos Convertidos (Mes Actual)")
+    st.dataframe(df_converts_mes)
+
+    st.markdown("### 📖 Miembros en Discipulado")
+    st.dataframe(discipulado_mes)
+
+    # --- Gráfica de crecimiento por célula ---
+    st.markdown("### 📈 Crecimiento de las Células (Miembros, Convertidos y Asistencia)")
+    if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
+        miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
+        miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
+
+        convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
+        convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
+
+        asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
+
+        crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
+                               left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
+        crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
+        crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
+
+        crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
+        crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
+
+        st.bar_chart(crecimiento.set_index("Célula"))
+    else:
+        st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
 
 
 
