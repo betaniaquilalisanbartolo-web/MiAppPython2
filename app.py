@@ -224,7 +224,7 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Reporte de culto registrado para la célula '{cell_name}'!")
                 
-elif menu == "📊 Panel de Control y Reportes":
+    elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
         conn = sqlite3.connect(DB_PATH)
         df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
@@ -236,27 +236,23 @@ elif menu == "📊 Panel de Control y Reportes":
         mes_actual = hoy.month
         anio_actual = hoy.year
 
-        # --- Reportes de cultos por mes ---
         if not df_cell.empty and 'meeting_date' in df_cell.columns:
             df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
             df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
         else:
             df_cell_mes = pd.DataFrame()
 
-        # --- Convertidos por mes ---
         if not df_converts.empty and 'conversion_date' in df_converts.columns:
             df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
             df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
         else:
             df_converts_mes = pd.DataFrame()
 
-        # --- Discipulado por célula ---
         if not df_members.empty and 'discipleship_type' in df_members.columns:
             discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
         else:
             discipulado_mes = pd.DataFrame()
 
-        # --- KPIs ---
         total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
         total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
         total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
@@ -276,7 +272,6 @@ elif menu == "📊 Panel de Control y Reportes":
             total_asistencia = total_adultos + total_jovenes + total_ninos
             st.metric("Asistencia del Mes", f"{total_asistencia} asistencias")
 
-        # --- KPIs adicionales ---
         kpi5, kpi6, kpi7, kpi8 = st.columns(4)
         with kpi5:
             st.metric("Total Amigos", f"{total_amigos}")
@@ -286,6 +281,33 @@ elif menu == "📊 Panel de Control y Reportes":
             st.metric("Total Jóvenes", f"{total_jovenes}")
         with kpi8:
             st.metric("Total Adultos", f"{total_adultos}")
+
+        st.markdown("### 📌 Reportes de Células (Mes Actual)")
+        st.dataframe(df_cell_mes)
+
+        st.markdown("### 👤 Nuevos Convertidos (Mes Actual)")
+        st.dataframe(df_converts_mes)
+
+        st.markdown("### 📖 Miembros en Discipulado")
+        st.dataframe(discipulado_mes)
+
+        st.markdown("### 📈 Crecimiento de las Células")
+        if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
+            miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
+            miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
+            convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
+            convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
+            asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
+            crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
+                                   left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
+            crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
+            crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
+            crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
+            crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
+            st.bar_chart(crecimiento.set_index("Célula"))
+        else:
+            st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
+
 
         # --- Tablas detalladas ---
         st.markdown("### 📌 Reportes de Células (Mes Actual)")
