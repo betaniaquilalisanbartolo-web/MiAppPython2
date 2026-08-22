@@ -274,6 +274,32 @@ if st.session_state['logged_in']:
         st.markdown("### 📖 Miembros en Discipulado")
         st.dataframe(discipulado_mes)
 
+        # --- Gráfica de crecimiento por célula ---
+        st.markdown("### 📈 Crecimiento de las Células")
+
+        if not df_members.empty or not df_converts.empty:
+            # Agrupar miembros por célula
+            miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
+            miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
+
+            # Agrupar convertidos por célula
+            convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
+            convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
+
+            # Unir ambos DataFrames
+            crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
+                                   left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
+
+            # Ajustar nombres de columnas
+            crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
+            crecimiento = crecimiento[["Célula", "Miembros", "Convertidos"]]
+
+            # Mostrar gráfica
+            st.bar_chart(crecimiento.set_index("Célula"))
+        else:
+            st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
+
+
                 
 
 
