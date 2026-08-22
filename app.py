@@ -231,7 +231,6 @@ if st.session_state['logged_in']:
 
 
 
-       # ================= REPORTES DE CULTOS DE CÉLULA =================
 elif menu == "📋 Reportes de Cultos de Célula":
     st.subheader("Registrar Reporte de Culto de Célula")
     lista_celulas = obtener_nombres_celulas()
