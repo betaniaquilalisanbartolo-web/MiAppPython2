@@ -434,12 +434,14 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Reporte del culto de la célula '{cell_name}' guardado exitosamente!")
 
-elif menu == "📊 Panel de Control y Reportes":
+    # ================= PANEL DE CONTROL =================
+    elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
         conn = sqlite3.connect(DB_PATH)
         df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
         df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
         df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+
         # Verificar si existe la tabla de descarriados
         c = conn.cursor()
         c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='descarriados'")
@@ -495,19 +497,16 @@ elif menu == "📊 Panel de Control y Reportes":
         with kpi7: st.metric("Total Jóvenes", f"{total_jovenes}")
         with kpi8: st.metric("Total Adultos", f"{total_adultos}")
 
-                # --- Control de Descarriados por Célula ---
+        # --- Control de Descarriados por Célula ---
         if not df_descarriados.empty:
             descarriados_por_celula = df_descarriados.groupby("cell")["full_name"].count().reset_index()
             descarriados_por_celula.rename(columns={"full_name": "Total Descarriados"}, inplace=True)
 
             st.markdown("### 🚨 Descarriados por Célula")
             st.dataframe(descarriados_por_celula)
-
-            # Gráfica de barras
             st.bar_chart(descarriados_por_celula.set_index("cell"))
         else:
             st.info("No hay miembros descarriados registrados por célula.")
-
 
         # --- Clasificación por edad y sexo ---
         def clasificar_edad(edad):
