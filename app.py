@@ -187,7 +187,7 @@ if st.session_state['logged_in']:
         with kpi2:
             st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
 
-                with kpi3:
+        with kpi3:
             miembros_activos = len(df_members[df_members['status'] == 'activo']) if not df_members.empty else 0
             st.metric("Miembros Activos", f"{miembros_activos} personas")
 
