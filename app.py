@@ -177,6 +177,13 @@ if not df_converts.empty and 'conversion_date' in df_converts.columns:
 else:
     df_converts_mes = pd.DataFrame()
 
+with kpi1:
+    st.metric("Ofrenda del Mes", f"${total_ofrenda_mes:,.2f}")
+
+with kpi2:
+    st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
+
+
 # KPIs mensuales
 total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
 total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
