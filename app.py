@@ -151,31 +151,33 @@ if st.session_state['logged_in']:
         ]
     )
 
-    # ================= REGISTRO DE MIEMBROS POR CÉLULA =================
-    if menu == "👥 Registro de Miembros por Célula":
-        st.subheader("Registrar Miembros en una Célula")
-        lista_celulas = obtener_nombres_celulas()
-        with st.form("form_miembros_celula", clear_on_submit=True):
-            full_name = st.text_input("Nombre Completo")
-            age = st.number_input("Edad", min_value=1, max_value=120)
-            phone = st.text_input("Teléfono")
-            cell = st.selectbox("Célula", lista_celulas)
-            sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
-            discipulado = st.radio("¿Está siendo discipulado?", ["Sí", "No"])
-            otra_iglesia = st.radio("¿Vino de otra iglesia?", ["Sí", "No"])
-            fecha_ingreso = st.date_input("Fecha de Ingreso")
-            ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
+  # ================= REGISTRO DE MIEMBROS POR CÉLULA =================
+if menu == "👥 Registro de Miembros por Célula":
+    st.subheader("Registrar Miembros en una Célula")
+    lista_celulas = obtener_nombres_celulas()
+    with st.form("form_miembros_celula", clear_on_submit=True):
+        full_name = st.text_input("Nombre Completo")
+        age = st.number_input("Edad", min_value=1, max_value=120)
+        phone = st.text_input("Teléfono")
+        cell = st.selectbox("Célula", lista_celulas)
+        sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
+        discipulado = st.radio("¿Está siendo discipulado?", ["Sí", "No"])
+        otra_iglesia = st.radio("¿Vino de otra iglesia?", ["Sí", "No"])
+        fecha_ingreso = st.date_input("Fecha de Ingreso")
+        fecha_ingreso_str = fecha_ingreso.strftime("%Y-%m-%d")  # ✅ convertir a texto
+        ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
 
-            if st.form_submit_button("Guardar Miembro"):
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute('''INSERT INTO members_stats 
-                    (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (full_name, age, phone, cell, sex, discipulado, otra_iglesia, fecha_ingreso, ministry, "activo"))
-                conn.commit()
-                conn.close()
-                st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
+        if st.form_submit_button("Guardar Miembro"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute('''INSERT INTO members_stats 
+                (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (full_name, age, phone, cell, sex, discipulado, otra_iglesia, fecha_ingreso_str, ministry, "activo"))
+            conn.commit()
+            conn.close()
+            st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
+
 
     # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
     elif menu == "📝 Registro de Nuevos Convertidos":
@@ -201,50 +203,52 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Nuevo convertido '{full_name}' registrado en la célula '{assigned_cell}'!")
 
-    # ================= REPORTES DE CULTOS DE CÉLULA =================
-    elif menu == "📋 Reportes de Cultos de Célula":
-        st.subheader("Registrar Reporte de Culto de Célula")
-        lista_celulas = obtener_nombres_celulas()
-        opciones_celulas = lista_celulas + ["➕ Registrar Nueva Célula"]
+# ================= REPORTES DE CULTOS DE CÉLULA =================
+elif menu == "📋 Reportes de Cultos de Célula":
+    st.subheader("Registrar Reporte de Culto de Célula")
+    lista_celulas = obtener_nombres_celulas()
+    opciones_celulas = lista_celulas + ["➕ Registrar Nueva Célula"]
 
-        with st.form("form_celula", clear_on_submit=True):
-            celula_seleccionada = st.selectbox("Selecciona el Nombre de la Célula", opciones_celulas)
-            nombre_nueva_celula = st.text_input("Si seleccionaste 'Registrar Nueva Célula', escribe su nombre aquí:")
-            meeting_date = st.date_input("Fecha de Reunión")
-            
-            col1, col2, col3 = st.columns(3)
-            adults = col1.number_input("Adultos", min_value=0, step=1)
-            youth = col2.number_input("Jóvenes", min_value=0, step=1)
-            children = col3.number_input("Niños", min_value=0, step=1)
-            friends = col1.number_input("Amigos", min_value=0, step=1)
-            visits = col2.number_input("Visitas", min_value=0, step=1)
+    with st.form("form_celula", clear_on_submit=True):
+        celula_seleccionada = st.selectbox("Selecciona el Nombre de la Célula", opciones_celulas)
+        nombre_nueva_celula = st.text_input("Si seleccionaste 'Registrar Nueva Célula', escribe su nombre aquí:")
+        meeting_date = st.date_input("Fecha de Reunión")
+        meeting_date_str = meeting_date.strftime("%Y-%m-%d")  # ✅ convertir a texto
 
-            house_leader = st.text_input("Líder de Casa")
-            biblical_theme = st.text_input("Tema Bíblico")
-            central_text = st.text_input("Texto Central")
-            offering = st.number_input("Ofrenda", min_value=0.0, step=1.0)
-            needs = st.text_area("Necesidades")
-            spiritual_level = st.selectbox("Nivel Espiritual", ["Bajo", "Medio", "Alto"])
-            attendance_level = st.slider("Nivel de Asistencia", 1, 10, 5)
-            
-            if st.form_submit_button("Guardar Reporte"):
-                if celula_seleccionada == "➕ Registrar Nueva Célula":
-                    cell_name_final = nombre_nueva_celula.strip()
-                else:
-                    cell_name_final = celula_seleccionada
+        col1, col2, col3 = st.columns(3)
+        adults = col1.number_input("Adultos", min_value=0, step=1)
+        youth = col2.number_input("Jóvenes", min_value=0, step=1)
+        children = col3.number_input("Niños", min_value=0, step=1)
+        friends = col1.number_input("Amigos", min_value=0, step=1)
+        visits = col2.number_input("Visitas", min_value=0, step=1)
 
-                if not cell_name_final:
-                    st.error("Por favor, introduce un nombre válido para la célula.")
-                else:
-                    conn = sqlite3.connect(DB_PATH)
-                    c = conn.cursor()
-                    c.execute('''INSERT INTO cell_reports 
-                        (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                        (cell_name_final, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
-                    conn.commit()
-                    conn.close()
-                    st.success(f"¡Reporte de la célula '{cell_name_final}' guardado exitosamente!")
+        house_leader = st.text_input("Líder de Casa")
+        biblical_theme = st.text_input("Tema Bíblico")
+        central_text = st.text_input("Texto Central")
+        offering = st.number_input("Ofrenda", min_value=0.0, step=1.0)
+        needs = st.text_area("Necesidades")
+        spiritual_level = st.selectbox("Nivel Espiritual", ["Bajo", "Medio", "Alto"])
+        attendance_level = st.slider("Nivel de Asistencia", 1, 10, 5)
+        
+        if st.form_submit_button("Guardar Reporte"):
+            if celula_seleccionada == "➕ Registrar Nueva Célula":
+                cell_name_final = nombre_nueva_celula.strip()
+            else:
+                cell_name_final = celula_seleccionada
+
+            if not cell_name_final:
+                st.error("Por favor, introduce un nombre válido para la célula.")
+            else:
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute('''INSERT INTO cell_reports 
+                    (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    (cell_name_final, meeting_date_str, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
+                conn.commit()
+                conn.close()
+                st.success(f"¡Reporte de la célula '{cell_name_final}' guardado exitosamente!")
+
 
     # ================= PANEL DE CONTROL =================
     elif menu == "📊 Panel de Control y Reportes":
