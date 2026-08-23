@@ -167,16 +167,16 @@ if menu == "👥 Registro de Miembros por Célula":
         fecha_ingreso_str = fecha_ingreso.strftime("%Y-%m-%d")  # ✅ convertir a texto
         ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
 
-        if st.form_submit_button("Guardar Miembro"):
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute('''INSERT INTO members_stats 
-                (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                (full_name, age, phone, cell, sex, discipulado, otra_iglesia, fecha_ingreso_str, ministry, "activo"))
-            conn.commit()
-            conn.close()
-            st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
+       if st.form_submit_button("Guardar Miembro"):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''INSERT INTO members_stats 
+        (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        (full_name, age, contact, cell, sex, discipulado, otra_iglesia, fecha_ingreso_str, ministry, "activo"))
+    conn.commit()
+    conn.close()
+    st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
 
 
     # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
