@@ -394,7 +394,8 @@ if st.session_state['logged_in']:
         if not df_descarriados.empty:
             st.markdown("### 🚨 Lista de Descarriados")
             st.dataframe(df_descarriados)
-    # ================= REGISTRO DE DESCARRIADOS =================
+            
+# ================= REGISTRO DE DESCARRIADOS =================
 elif menu == "🚨 Registro de Descarriados":
         st.subheader("Registrar Miembro Descarriado")
         lista_celulas = obtener_nombres_celulas()
