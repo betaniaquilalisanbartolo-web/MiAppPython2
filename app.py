@@ -297,7 +297,7 @@ if st.session_state['logged_in']:
 
         # --- Gráfica de crecimiento por célula ---
         st.markdown("### 📈 Crecimiento de las Células (Miembros, Convertidos y Asistencia)")
-        if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
+           if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
             miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
             miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
 
