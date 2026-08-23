@@ -282,7 +282,7 @@ elif menu == "📊 Panel de Control y Reportes":
             st.markdown("### 🚨 Lista de Descarriados")
             st.dataframe(df_descarriados)
 
-    # ================= REGISTRO DE DESCARRIADOS =================
+       # ================= REGISTRO DE DESCARRIADOS =================
     elif menu == "🚨 Registro de Descarriados":
         st.subheader("Registrar Miembro Descarriado")
         lista_celulas = obtener_nombres_celulas()
