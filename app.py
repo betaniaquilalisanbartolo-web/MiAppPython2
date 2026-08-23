@@ -256,257 +256,115 @@ elif menu == "📊 Panel de Control y Reportes":
 
     # Conexión y lectura de las tablas
     conn = sqlite3.connect(DB_PATH)
-    df_cell_mes = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+    df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
     df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
     df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+
+    # Verificar si existe la tabla de descarriados
+    c = conn.cursor()
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='descarriados'")
+    if c.fetchone():
+        df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
+    else:
+        df_descarriados = pd.DataFrame()
     conn.close()
 
-    if df_cell_mes.empty:
-        st.warning("No hay reportes de células registrados todavía.")
+    # --- Filtrar datos del mes actual ---
+    hoy = datetime.date.today()
+    mes_actual = hoy.month
+    anio_actual = hoy.year
+
+    if not df_cell.empty and 'meeting_date' in df_cell.columns:
+        df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
+        df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
     else:
-        st.write("📋 Datos de Reportes de Células")
-        st.dataframe(df_cell_mes)
+        df_cell_mes = pd.DataFrame()
 
-        # Agrupamiento por célula y suma de asistencia
+    if not df_converts.empty and 'conversion_date' in df_converts.columns:
+        df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
+        df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
+    else:
+        df_converts_mes = pd.DataFrame()
+
+    if not df_members.empty and 'discipleship_type' in df_members.columns:
+        discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
+    else:
+        discipulado_mes = pd.DataFrame()
+
+    # --- Gráfica de crecimiento por célula ---
+    st.markdown("### 📈 Crecimiento de las Células (Miembros, Convertidos y Asistencia)")
+    if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
+        miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
+        miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
+
+        convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
+        convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
+
         asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
 
-        st.write("📈 Asistencia por Célula")
-        st.bar_chart(asistencia_por_celula.set_index("cell_name"))
+        crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
+                               left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
+        crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
+        crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
 
-        # Agrupamiento por célula y suma de asistencia
-        asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
+        crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
+        crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
 
-        st.write("📈 Asistencia por Célula")
-        st.bar_chart(asistencia_por_celula.set_index("cell_name"))
+        st.dataframe(crecimiento)
+        st.bar_chart(crecimiento.set_index("Célula"))
+    else:
+        st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
 
+    # --- KPIs adicionales ---
+    total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
+    total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
+    total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
+    total_amigos = df_cell_mes['friends'].sum() if not df_cell_mes.empty else 0
+    total_ninos = df_cell_mes['children'].sum() if not df_cell_mes.empty else 0
+    total_jovenes = df_cell_mes['youth'].sum() if not df_cell_mes.empty else 0
+    total_adultos = df_cell_mes['adults'].sum() if not df_cell_mes.empty else 0
+    total_descarriados = len(df_descarriados) if not df_descarriados.empty else 0
 
-        # Verificar si existe la tabla de descarriados
-        c = conn.cursor()
-        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='descarriados'")
-        if c.fetchone():
-            df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
-        else:
-            df_descarriados = pd.DataFrame()
-        conn.close()
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    with kpi1: st.metric("Ofrenda del Mes", f"${total_ofrenda_mes:,.2f}")
+    with kpi2: st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
+    with kpi3: st.metric("En Discipulado", f"{total_discipulado_mes} personas")
+    with kpi4: st.metric("Asistencia del Mes", f"{total_adultos + total_jovenes + total_ninos} asistencias")
 
-        hoy = datetime.date.today()
-        mes_actual = hoy.month
-        anio_actual = hoy.year
+    kpi5, kpi6, kpi7, kpi8 = st.columns(4)
+    with kpi5: st.metric("Total Amigos", f"{total_amigos}")
+    with kpi6: st.metric("Total Niños", f"{total_ninos}")
+    with kpi7: st.metric("Total Jóvenes", f"{total_jovenes}")
+    with kpi8: st.metric("Total Adultos", f"{total_adultos}")
 
-        # --- KPIs básicos --- 
-        if not df_cell.empty and 'meeting_date' in df_cell.columns:
-            df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
-            df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
-        else:
-            df_cell_mes = pd.DataFrame()
+    # --- Clasificación por edad y sexo ---
+    def clasificar_edad(edad):
+        if edad <= 12: return "Niños"
+        elif edad <= 17: return "Adolescentes"
+        elif edad <= 30: return "Jóvenes"
+        elif edad <= 60: return "Adultos"
+        else: return "Tercera Edad"
 
-        if not df_converts.empty and 'conversion_date' in df_converts.columns:
-            df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
-            df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
-        else:
-            df_converts_mes = pd.DataFrame()
+    if not df_members.empty:
+        df_members["grupo_edad"] = df_members["age"].apply(clasificar_edad)
+        estadisticas = df_members.groupby(["grupo_edad","sex"])["full_name"].count().reset_index()
+        st.markdown("### 📈 Distribución por Edad y Sexo")
+        st.dataframe(estadisticas)
 
-        if not df_members.empty and 'discipleship_type' in df_members.columns:
-            discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
-        else:
-            discipulado_mes = pd.DataFrame()
+        if "discipleship_type" in df_members.columns:
+            espirituales = df_members.groupby("discipleship_type")["full_name"].count().reset_index()
+            st.markdown("### ✝️ Estado Espiritual (Bautizado / Catecúmeno)")
+            st.dataframe(espirituales)
 
-        # --- Gráfica de crecimiento por célula ---
-        st.markdown("### 📈 Crecimiento de las Células (Miembros, Convertidos y Asistencia)")
-        if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
-            miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
-            miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
+    # --- Descarriados ---
+    st.metric("Miembros Descarriados", f"{total_descarriados}")
+    if not df_descarriados.empty:
+        st.markdown("### 🚨 Lista de Descarriados")
+        st.dataframe(df_descarriados)
 
-            convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
-            convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
-
-            asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
-
-            crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
-                                   left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
-            crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
-            crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
-
-            crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
-            crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
-
-            st.dataframe(crecimiento)
-            st.bar_chart(crecimiento.set_index("Célula"))
-        else:
-            st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
-
-        # --- KPIs adicionales ---
-        total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
-        total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
-        total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
-        total_amigos = df_cell_mes['friends'].sum() if not df_cell_mes.empty else 0
-        total_ninos = df_cell_mes['children'].sum() if not df_cell_mes.empty else 0
-        total_jovenes = df_cell_mes['youth'].sum() if not df_cell_mes.empty else 0
-        total_adultos = df_cell_mes['adults'].sum() if not df_cell_mes.empty else 0
-        total_descarriados = len(df_descarriados) if not df_descarriados.empty else 0
-
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-        with kpi1: st.metric("Ofrenda del Mes", f"${total_ofrenda_mes:,.2f}")
-        with kpi2: st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
-        with kpi3: st.metric("En Discipulado", f"{total_discipulado_mes} personas")
-        with kpi4: st.metric("Asistencia del Mes", f"{total_adultos + total_jovenes + total_ninos} asistencias")
-
-        kpi5, kpi6, kpi7, kpi8 = st.columns(4)
-        with kpi5: st.metric("Total Amigos", f"{total_amigos}")
-        with kpi6: st.metric("Total Niños", f"{total_ninos}")
-        with kpi7: st.metric("Total Jóvenes", f"{total_jovenes}")
-        with kpi8: st.metric("Total Adultos", f"{total_adultos}")
-
-        # --- Clasificación por edad y sexo ---
-        def clasificar_edad(edad):
-            if edad <= 12: return "Niños"
-            elif edad <= 17: return "Adolescentes"
-            elif edad <= 30: return "Jóvenes"
-            elif edad <= 60: return "Adultos"
-            else: return "Tercera Edad"
-
-        if not df_members.empty:
-            df_members["grupo_edad"] = df_members["age"].apply(clasificar_edad)
-            estadisticas = df_members.groupby(["grupo_edad","sex"])["full_name"].count().reset_index()
-            st.markdown("### 📈 Distribución por Edad y Sexo")
-            st.dataframe(estadisticas)
-
-            if "discipleship_type" in df_members.columns:
-                espirituales = df_members.groupby("discipleship_type")["full_name"].count().reset_index()
-                st.markdown("### ✝️ Estado Espiritual (Bautizado / Catecúmeno)")
-                st.dataframe(espirituales)
-
-        # --- Descarriados ---
-        st.metric("Miembros Descarriados", f"{total_descarriados}")
-        if not df_descarriados.empty:
-            st.markdown("### 🚨 Lista de Descarriados")
-            st.dataframe(df_descarriados)
-
-        # --- Tablas detalladas ---
-        st.markdown("### 📌 Reportes de Células")
-        st.dataframe(df_cell)
-
-        st.markdown("### 👤 Nuevos Convertidos")
-        st.dataframe(df_converts)
-
-        st.markdown("### 📖 Miembros en Discipulado")
-        st.dataframe(df_members[df_members['discipleship_type']=="Sí"])
-
-
-    # ================= PANEL DE CONTROL =================
-elif menu == "📊 Panel de Control y Reportes":
-        st.subheader("📊 Panel de Análisis Automático de la Iglesia")
-        conn = sqlite3.connect(DB_PATH)
-        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
-        df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
-        df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
-
-        # Verificar si existe la tabla de descarriados
-        c = conn.cursor()
-        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='descarriados'")
-        if c.fetchone():
-            df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
-        else:
-            df_descarriados = pd.DataFrame()
-        conn.close()
-
-        hoy = datetime.date.today()
-        mes_actual = hoy.month
-        anio_actual = hoy.year
-
-        # --- KPIs básicos --- 
-        if not df_cell.empty and 'meeting_date' in df_cell.columns:
-            df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
-            df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
-        else:
-            df_cell_mes = pd.DataFrame()
-
-        if not df_converts.empty and 'conversion_date' in df_converts.columns:
-            df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
-            df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
-        else:
-            df_converts_mes = pd.DataFrame()
-
-        if not df_members.empty and 'discipleship_type' in df_members.columns:
-            discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
-        else:
-            discipulado_mes = pd.DataFrame()
-
-        # --- Gráfica de crecimiento por célula ---
-        st.markdown("### 📈 Crecimiento de las Células (Miembros, Convertidos y Asistencia)")
-        if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
-            miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
-            miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
-
-            convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
-            convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
-
-            asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
-
-            crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
-                                   left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
-            crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
-            crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
-
-            crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
-            crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
-
-            st.dataframe(crecimiento)
-            st.bar_chart(crecimiento.set_index("Célula"))
-        else:
-            st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
-
-        # KPIs adicionales
-        total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
-        total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
-        total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
-        total_amigos = df_cell_mes['friends'].sum() if not df_cell_mes.empty else 0
-        total_ninos = df_cell_mes['children'].sum() if not df_cell_mes.empty else 0
-        total_jovenes = df_cell_mes['youth'].sum() if not df_cell_mes.empty else 0
-        total_adultos = df_cell_mes['adults'].sum() if not df_cell_mes.empty else 0
-        total_descarriados = len(df_descarriados) if not df_descarriados.empty else 0
-
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-        with kpi1: st.metric("Ofrenda del Mes", f"${total_ofrenda_mes:,.2f}")
-        with kpi2: st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
-        with kpi3: st.metric("En Discipulado", f"{total_discipulado_mes} personas")
-        with kpi4: st.metric("Asistencia del Mes", f"{total_adultos + total_jovenes + total_ninos} asistencias")
-
-        kpi5, kpi6, kpi7, kpi8 = st.columns(4)
-        with kpi5: st.metric("Total Amigos", f"{total_amigos}")
-        with kpi6: st.metric("Total Niños", f"{total_ninos}")
-        with kpi7: st.metric("Total Jóvenes", f"{total_jovenes}")
-        with kpi8: st.metric("Total Adultos", f"{total_adultos}")
-
-        # --- Clasificación por edad y sexo ---
-        def clasificar_edad(edad):
-            if edad <= 12: return "Niños"
-            elif edad <= 17: return "Adolescentes"
-            elif edad <= 30: return "Jóvenes"
-            elif edad <= 60: return "Adultos"
-            else: return "Tercera Edad"
-
-        if not df_members.empty:
-            df_members["grupo_edad"] = df_members["age"].apply(clasificar_edad)
-            estadisticas = df_members.groupby(["grupo_edad","sex"])["full_name"].count().reset_index()
-            st.markdown("### 📈 Distribución por Edad y Sexo")
-            st.dataframe(estadisticas)
-
-            if "discipleship_type" in df_members.columns:
-                espirituales = df_members.groupby("discipleship_type")["full_name"].count().reset_index()
-                st.markdown("### ✝️ Estado Espiritual (Bautizado / Catecúmeno)")
-                st.dataframe(espirituales)
-
-        st.metric("Miembros Descarriados", f"{total_descarriados}")
-        if not df_descarriados.empty:
-            st.markdown("### 🚨 Lista de Descarriados")
-            st.dataframe(df_descarriados)
-
-        st.markdown("### 📌 Reportes de Células")
-        st.dataframe(df_cell)
-
-        st.markdown("### 👤 Nuevos Convertidos")
-        st.dataframe(df_converts)
-
-        st.markdown("### 📖 Miembros en Discipulado")
-        st.dataframe(df_members[df_members['discipleship_type']=="Sí"])
+    # --- Nombres de miembros por célula ---
+    if not df_members.empty:
+        st.markdown("### 👥 Miembros por Célula")
+        miembros_por_celula = df_members.groupby("cell")["full_name"].apply(list).reset_index()
+        for _, fila in miembros_por_celula.iterrows():
+            st.write(f"**{fila
