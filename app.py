@@ -238,7 +238,7 @@ if st.session_state['logged_in']:
                     st.success(f"¡Reporte de la célula '{cell_name_final}' guardado exitosamente!")
                     st.rerun()
 
-    # ================= PANEL DE CONTROL =================
+        # ================= PANEL DE CONTROL =================
 elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
         conn = sqlite3.connect(DB_PATH)
