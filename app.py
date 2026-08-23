@@ -167,7 +167,7 @@ if menu == "👥 Registro de Miembros por Célula":
         fecha_ingreso_str = fecha_ingreso.strftime("%Y-%m-%d")  # ✅ convertir a texto
         ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
 
-       if st.form_submit_button("Guardar Miembro"):
+if st.form_submit_button("Guardar Miembro"):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''INSERT INTO members_stats 
