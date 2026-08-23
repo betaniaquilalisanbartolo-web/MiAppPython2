@@ -458,6 +458,7 @@ if st.session_state['logged_in']:
         if not df_descarriados.empty:
             st.markdown("### 🚨 Lista de Descarriados")
             st.dataframe(df_descarriados)
+            
                     # --- Gráfica de crecimiento por célula ---
         st.markdown("### 📈 Crecimiento de las Células (Miembros, Convertidos y Asistencia)")
         if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
