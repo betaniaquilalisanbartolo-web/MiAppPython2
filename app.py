@@ -395,14 +395,15 @@ if st.session_state['logged_in']:
             st.markdown("### 🚨 Lista de Descarriados")
             st.dataframe(df_descarriados)
             
-# ================= REGISTRO DE DESCARRIADOS =================
-elif menu == "🚨 Registro de Descarriados":
+    # ================= REGISTRO DE DESCARRIADOS =================
+    elif menu == "🚨 Registro de Descarriados":
         st.subheader("Registrar Miembro Descarriado")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_descarriados", clear_on_submit=True):
             full_name = st.text_input("Nombre Completo")
             cell = st.selectbox("Célula", lista_celulas)
             fecha_desercion = st.date_input("Fecha de Deserción")
+            fecha_desercion_str = fecha_desercion.strftime("%Y-%m-%d")  # ✅ convertir a texto
             motivo = st.text_area("Motivo de Deserción (opcional)")
 
             if st.form_submit_button("Guardar Descarriado"):
@@ -416,11 +417,12 @@ elif menu == "🚨 Registro de Descarriados":
                     motivo TEXT
                 )''')
                 c.execute("INSERT INTO descarriados (full_name, cell, fecha_desercion, motivo) VALUES (?, ?, ?, ?)",
-                          (full_name, cell, fecha_desercion, motivo))
+                          (full_name, cell, fecha_desercion_str, motivo))
                 c.execute("UPDATE members_stats SET status='desertado' WHERE full_name=? AND cell=?", (full_name, cell))
                 conn.commit()
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
+
     # ================= PANEL DE CONTROL =================
 elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
