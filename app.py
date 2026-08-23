@@ -269,7 +269,7 @@ elif menu == "📊 Panel de Control y Reportes":
         df_descarriados = pd.DataFrame()
     conn.close()
 
-    # --- Usar todos los datos (sin filtro de fecha) ---
+    # --- Usar todos los datos directamente ---
     df_cell_mes = df_cell
     df_converts_mes = df_converts
     discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"] if not df_members.empty else pd.DataFrame()
@@ -298,10 +298,10 @@ elif menu == "📊 Panel de Control y Reportes":
     else:
         st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
 
-    # --- KPIs adicionales ---
-    total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
-    total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
-    total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
+    # --- KPIs totales ---
+    total_ofrenda = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
+    total_convertidos = len(df_converts_mes) if not df_converts_mes.empty else 0
+    total_discipulado = len(discipulado_mes) if not discipulado_mes.empty else 0
     total_amigos = df_cell_mes['friends'].sum() if not df_cell_mes.empty else 0
     total_ninos = df_cell_mes['children'].sum() if not df_cell_mes.empty else 0
     total_jovenes = df_cell_mes['youth'].sum() if not df_cell_mes.empty else 0
@@ -309,9 +309,9 @@ elif menu == "📊 Panel de Control y Reportes":
     total_descarriados = len(df_descarriados) if not df_descarriados.empty else 0
 
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    with kpi1: st.metric("Ofrenda Total", f"${total_ofrenda_mes:,.2f}")
-    with kpi2: st.metric("Convertidos Totales", f"{total_convertidos_mes} personas")
-    with kpi3: st.metric("En Discipulado", f"{total_discipulado_mes} personas")
+    with kpi1: st.metric("Ofrenda Total", f"${total_ofrenda:,.2f}")
+    with kpi2: st.metric("Convertidos Totales", f"{total_convertidos} personas")
+    with kpi3: st.metric("En Discipulado", f"{total_discipulado} personas")
     with kpi4: st.metric("Asistencia Total", f"{total_adultos + total_jovenes + total_ninos} asistencias")
 
     kpi5, kpi6, kpi7, kpi8 = st.columns(4)
@@ -343,3 +343,4 @@ elif menu == "📊 Panel de Control y Reportes":
 
     st.markdown("### 📖 Miembros en Discipulado")
     st.dataframe(df_members[df_members['discipleship_type']=="Sí"])
+
