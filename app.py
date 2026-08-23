@@ -250,13 +250,35 @@ if st.session_state['logged_in']:
                     conn.close()
                     st.success(f"¡Reporte de la célula '{cell_name_final}' guardado exitosamente!")
 
-    # ================= PANEL DE CONTROL =================
-    elif menu == "📊 Panel de Control y Reportes":
-        st.subheader("📊 Panel de Análisis Automático de la Iglesia")
-        conn = sqlite3.connect(DB_PATH)
-        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
-        df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
-        df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+# ================= PANEL DE CONTROL =================
+elif menu == "📊 Panel de Control y Reportes":
+    st.subheader("📊 Panel de Análisis Automático de la Iglesia")
+
+    # Conexión y lectura de las tablas
+    conn = sqlite3.connect(DB_PATH)
+    df_cell_mes = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+    df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
+    df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+    conn.close()
+
+    if df_cell_mes.empty:
+        st.warning("No hay reportes de células registrados todavía.")
+    else:
+        st.write("📋 Datos de Reportes de Células")
+        st.dataframe(df_cell_mes)
+
+        # Agrupamiento por célula y suma de asistencia
+        asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
+
+        st.write("📈 Asistencia por Célula")
+        st.bar_chart(asistencia_por_celula.set_index("cell_name"))
+
+        # Agrupamiento por célula y suma de asistencia
+        asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
+
+        st.write("📈 Asistencia por Célula")
+        st.bar_chart(asistencia_por_celula.set_index("cell_name"))
+
 
         # Verificar si existe la tabla de descarriados
         c = conn.cursor()
