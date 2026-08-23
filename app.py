@@ -281,6 +281,45 @@ if st.session_state['logged_in']:
         with kpi4: st.metric("Asistencia del Mes", f"{total_asistencia} asistencias")
 
         st.metric("Miembros Descarriados", f"{total_descarriados}")
+        
+        # --- Control de Descarriados por Célula ---
+        if not df_descarriados.empty:
+            descarriados_por_celula = df_descarriados.groupby("cell")["full_name"].count().reset_index()
+            descarriados_por_celula.rename(columns={"full_name": "Total Descarriados"}, inplace=True)
+
+            st.markdown("### 🚨 Descarriados por Célula")
+            st.dataframe(descarriados_por_celula)
+
+            # Gráfica comparativa de descarriados por célula
+            st.bar_chart(descarriados_por_celula.set_index("cell"))
+        else:
+            st.info("No hay miembros descarriados registrados por célula.")
+
+        # --- Gráfica de crecimiento por célula ---
+        st.markdown("### 📈 Crecimiento de las Células (Miembros, Convertidos y Asistencia)")
+        if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
+            miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
+            miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
+
+            convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
+            convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
+
+            asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
+
+            # Unir todo en un solo DataFrame
+            crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
+                                   left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
+            crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
+            crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
+
+            crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
+            crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
+
+            st.dataframe(crecimiento)
+            st.bar_chart(crecimiento.set_index("Célula"))
+        else:
+            st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
+
 
         # --- Tablas detalladas ---
         st.markdown("### 📌 Reportes de Células")
