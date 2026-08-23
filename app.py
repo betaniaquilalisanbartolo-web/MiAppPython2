@@ -382,7 +382,7 @@ elif menu == "📊 Panel de Control y Reportes":
             st.markdown("### 🚨 Lista de Descarriados")
             st.dataframe(df_descarriados)
     # ================= REGISTRO DE DESCARRIADOS =================
-    elif menu == "🚨 Registro de Descarriados":
+elif menu == "🚨 Registro de Descarriados":
         st.subheader("Registrar Miembro Descarriado")
         lista_celulas = obtener_nombres_celulas()
         with st.form("form_descarriados", clear_on_submit=True):
@@ -408,7 +408,7 @@ elif menu == "📊 Panel de Control y Reportes":
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
     # ================= PANEL DE CONTROL =================
-    elif menu == "📊 Panel de Control y Reportes":
+elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
         conn = sqlite3.connect(DB_PATH)
         df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
