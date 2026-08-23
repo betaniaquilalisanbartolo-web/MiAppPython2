@@ -251,38 +251,24 @@ if st.session_state['logged_in']:
 
     # ================= PANEL DE CONTROL =================
     elif menu == "📊 Panel de Control y Reportes":
-        # (tu bloque de panel de control completo aquí, ya corregido con fechas convertidas)
-        ...
+        st.subheader("📊 Panel de Análisis Automático de la Iglesia")
+        conn = sqlite3.connect(DB_PATH)
+        df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+        df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
+        df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
 
-    # ================= REGISTRO DE DESCARRIADOS =================
-    elif menu == "🚨 Registro de Descarriados":
-        st.subheader("Registrar Miembro Descarriado")
-        lista_celulas = obtener_nombres_celulas()
-        with st.form("form_descarriados", clear_on_submit=True):
-            full_name = st.text_input("Nombre Completo")
-            cell = st.selectbox("Célula", lista_celulas)
-            fecha_desercion = st.date_input("Fecha de Deserción")
-            fecha_desercion_str = fecha_desercion.strftime("%Y-%m-%d")
-            motivo = st.text_area("Motivo de Deserción (opcional)")
+        # Verificar si existe la tabla de descarriados
+        c = conn.cursor()
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='descarriados'")
+        if c.fetchone():
+            df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
+        else:
+            df_descarriados = pd.DataFrame()
+        conn.close()
 
-            if st.form_submit_button("Guardar Descarriado"):
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute('''CREATE TABLE IF NOT EXISTS descarriados (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                    full_name TEXT, 
-                    cell TEXT, 
-                    fecha_desercion TEXT, 
-                    motivo TEXT
-                )''')
-                c.execute("INSERT INTO descarriados (full_name, cell, fecha_desercion, motivo) VALUES (?, ?, ?, ?)",
-                          (full_name, cell, fecha_desercion_str, motivo))
-                c.execute("UPDATE members_stats SET status='desertado' WHERE full_name=? AND cell=?", (full_name, cell))
-                conn.commit()
-                conn.close()
-                st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
-
-
+        hoy = datetime.date.today()
+        mes_actual = hoy.month
+        anio_actual = hoy.year
 
         # --- KPIs básicos --- 
         if not df_cell.empty and 'meeting_date' in df_cell.columns:
@@ -301,37 +287,32 @@ if st.session_state['logged_in']:
             discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
         else:
             discipulado_mes = pd.DataFrame()
-                # --- Gráfica de crecimiento por célula ---
+
+        # --- Gráfica de crecimiento por célula ---
         st.markdown("### 📈 Crecimiento de las Células (Miembros, Convertidos y Asistencia)")
         if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
-            # Miembros por célula
             miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
             miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
 
-            # Convertidos por célula
             convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
             convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
 
-            # Asistencia por célula
             asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
 
-            # Unir todo en un solo DataFrame
             crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
                                    left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
             crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
             crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
 
-            # Seleccionar columnas relevantes y renombrar
             crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
             crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
 
-            # Mostrar tabla y gráfico
             st.dataframe(crecimiento)
             st.bar_chart(crecimiento.set_index("Célula"))
         else:
             st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
 
-
+        # --- KPIs adicionales ---
         total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
         total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
         total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
@@ -367,7 +348,6 @@ if st.session_state['logged_in']:
             st.markdown("### 📈 Distribución por Edad y Sexo")
             st.dataframe(estadisticas)
 
-            # Estado espiritual
             if "discipleship_type" in df_members.columns:
                 espirituales = df_members.groupby("discipleship_type")["full_name"].count().reset_index()
                 st.markdown("### ✝️ Estado Espiritual (Bautizado / Catecúmeno)")
@@ -379,8 +359,6 @@ if st.session_state['logged_in']:
             st.markdown("### 🚨 Lista de Descarriados")
             st.dataframe(df_descarriados)
 
-
-
         # --- Tablas detalladas ---
         st.markdown("### 📌 Reportes de Células")
         st.dataframe(df_cell)
@@ -391,37 +369,6 @@ if st.session_state['logged_in']:
         st.markdown("### 📖 Miembros en Discipulado")
         st.dataframe(df_members[df_members['discipleship_type']=="Sí"])
 
-        if not df_descarriados.empty:
-            st.markdown("### 🚨 Lista de Descarriados")
-            st.dataframe(df_descarriados)
-            
-    # ================= REGISTRO DE DESCARRIADOS =================
-    elif menu == "🚨 Registro de Descarriados":
-        st.subheader("Registrar Miembro Descarriado")
-        lista_celulas = obtener_nombres_celulas()
-        with st.form("form_descarriados", clear_on_submit=True):
-            full_name = st.text_input("Nombre Completo")
-            cell = st.selectbox("Célula", lista_celulas)
-            fecha_desercion = st.date_input("Fecha de Deserción")
-            fecha_desercion_str = fecha_desercion.strftime("%Y-%m-%d")  # ✅ convertir a texto
-            motivo = st.text_area("Motivo de Deserción (opcional)")
-
-            if st.form_submit_button("Guardar Descarriado"):
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute('''CREATE TABLE IF NOT EXISTS descarriados (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                    full_name TEXT, 
-                    cell TEXT, 
-                    fecha_desercion TEXT, 
-                    motivo TEXT
-                )''')
-                c.execute("INSERT INTO descarriados (full_name, cell, fecha_desercion, motivo) VALUES (?, ?, ?, ?)",
-                          (full_name, cell, fecha_desercion_str, motivo))
-                c.execute("UPDATE members_stats SET status='desertado' WHERE full_name=? AND cell=?", (full_name, cell))
-                conn.commit()
-                conn.close()
-                st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
 
     # ================= PANEL DE CONTROL =================
     elif menu == "📊 Panel de Control y Reportes":
