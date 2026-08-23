@@ -423,7 +423,7 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
 
-    # ================= PANEL DE CONTROL =================
+# ================= PANEL DE CONTROL =================
 elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
         conn = sqlite3.connect(DB_PATH)
