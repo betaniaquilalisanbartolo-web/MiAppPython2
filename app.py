@@ -166,7 +166,6 @@ if menu == "👥 Registro de Miembros por Célula":
         fecha_ingreso_str = fecha_ingreso.strftime("%Y-%m-%d")  # ✅ convertir a texto
         ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
 
-        # ✅ el botón y el insert deben estar dentro del 'with st.form'
         if st.form_submit_button("Guardar Miembro"):
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
@@ -177,6 +176,7 @@ if menu == "👥 Registro de Miembros por Célula":
             conn.commit()
             conn.close()
             st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
+
 
     # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
 elif menu == "📝 Registro de Nuevos Convertidos":
