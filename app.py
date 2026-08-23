@@ -423,8 +423,8 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' marcado como descarriado en la célula '{cell}'!")
 
-# ================= PANEL DE CONTROL =================
-elif menu == "📊 Panel de Control y Reportes":
+    # ================= PANEL DE CONTROL =================
+    elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
         conn = sqlite3.connect(DB_PATH)
         df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
@@ -444,7 +444,7 @@ elif menu == "📊 Panel de Control y Reportes":
         mes_actual = hoy.month
         anio_actual = hoy.year
 
-        # --- KPIs básicos ---
+        # --- KPIs básicos --- 
         if not df_cell.empty and 'meeting_date' in df_cell.columns:
             df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
             df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
@@ -462,6 +462,31 @@ elif menu == "📊 Panel de Control y Reportes":
         else:
             discipulado_mes = pd.DataFrame()
 
+        # --- Gráfica de crecimiento por célula ---
+        st.markdown("### 📈 Crecimiento de las Células (Miembros, Convertidos y Asistencia)")
+        if not df_members.empty or not df_converts.empty or not df_cell_mes.empty:
+            miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
+            miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
+
+            convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
+            convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
+
+            asistencia_por_celula = df_cell_mes.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
+
+            crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
+                                   left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
+            crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
+            crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
+
+            crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
+            crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
+
+            st.dataframe(crecimiento)
+            st.bar_chart(crecimiento.set_index("Célula"))
+        else:
+            st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
+
+        # KPIs adicionales
         total_ofrenda_mes = df_cell_mes['offering'].sum() if not df_cell_mes.empty else 0.0
         total_convertidos_mes = len(df_converts_mes) if not df_converts_mes.empty else 0
         total_discipulado_mes = len(discipulado_mes) if not discipulado_mes.empty else 0
@@ -497,17 +522,21 @@ elif menu == "📊 Panel de Control y Reportes":
             st.markdown("### 📈 Distribución por Edad y Sexo")
             st.dataframe(estadisticas)
 
-            # Estado espiritual
             if "discipleship_type" in df_members.columns:
                 espirituales = df_members.groupby("discipleship_type")["full_name"].count().reset_index()
                 st.markdown("### ✝️ Estado Espiritual (Bautizado / Catecúmeno)")
                 st.dataframe(espirituales)
 
-        # --- Descarriados ---
         st.metric("Miembros Descarriados", f"{total_descarriados}")
         if not df_descarriados.empty:
             st.markdown("### 🚨 Lista de Descarriados")
             st.dataframe(df_descarriados)
-            
 
+        st.markdown("### 📌 Reportes de Células")
+        st.dataframe(df_cell)
 
+        st.markdown("### 👤 Nuevos Convertidos")
+        st.dataframe(df_converts)
+
+        st.markdown("### 📖 Miembros en Discipulado")
+        st.dataframe(df_members[df_members['discipleship_type']=="Sí"])
