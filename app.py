@@ -337,34 +337,26 @@ elif menu == "📊 Panel de Control y Reportes":
     with kpi7: st.metric("Total Jóvenes", f"{total_jovenes}")
     with kpi8: st.metric("Total Adultos", f"{total_adultos}")
 
-    # --- Clasificación por edad y sexo ---
-    def clasificar_edad(edad):
-        if edad <= 12: return "Niños"
-        elif edad <= 17: return "Adolescentes"
-        elif edad <= 30: return "Jóvenes"
-        elif edad <= 60: return "Adultos"
-        else: return "Tercera Edad"
-
-    if not df_members.empty:
-        df_members["grupo_edad"] = df_members["age"].apply(clasificar_edad)
-        estadisticas = df_members.groupby(["grupo_edad","sex"])["full_name"].count().reset_index()
-        st.markdown("### 📈 Distribución por Edad y Sexo")
-        st.dataframe(estadisticas)
-
-        if "discipleship_type" in df_members.columns:
-            espirituales = df_members.groupby("discipleship_type")["full_name"].count().reset_index()
-            st.markdown("### ✝️ Estado Espiritual (Bautizado / Catecúmeno)")
-            st.dataframe(espirituales)
-
-    # --- Descarriados ---
-    st.metric("Miembros Descarriados", f"{total_descarriados}")
-    if not df_descarriados.empty:
-        st.markdown("### 🚨 Lista de Descarriados")
-        st.dataframe(df_descarriados)
-
     # --- Nombres de miembros por célula ---
     if not df_members.empty:
         st.markdown("### 👥 Miembros por Célula")
         miembros_por_celula = df_members.groupby("cell")["full_name"].apply(list).reset_index()
         for _, fila in miembros_por_celula.iterrows():
-            st.write(f"**{fila
+            st.write(f"**{fila['cell']}**: {', '.join(fila['full_name'])}")
+
+    # --- Nombres de convertidos por célula ---
+    if not df_converts.empty:
+        st.markdown("### 🙌 Convertidos por Célula")
+        convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].apply(list).reset_index()
+        for _, fila in convertidos_por_celula.iterrows():
+            st.write(f"**{fila['assigned_cell']}**: {', '.join(fila['full_name'])}")
+
+    # --- Tablas detalladas ---
+    st.markdown("### 📌 Reportes de Células")
+    st.dataframe(df_cell)
+
+    st.markdown("### 👤 Nuevos Convertidos")
+    st.dataframe(df_converts)
+
+    st.markdown("### 📖 Miembros en Discipulado")
+    st.dataframe(df_members[df_members['discipleship_type']=="Sí"])
