@@ -239,7 +239,7 @@ if st.session_state['logged_in']:
                     st.rerun()
 
         # ================= PANEL DE CONTROL =================
-elif menu == "📊 Panel de Control y Reportes":
+ elif menu == "📊 Panel de Control y Reportes":
         st.subheader("📊 Panel de Análisis Automático de la Iglesia")
         conn = sqlite3.connect(DB_PATH)
         df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
