@@ -150,16 +150,33 @@ if st.session_state['logged_in']:
             "🚨 Registro de Descarriados"
         ]
     )
-if st.form_submit_button("Guardar Miembro"):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute('''INSERT INTO members_stats 
-        (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-        (full_name, age, contact, cell, sex, discipulado, otra_iglesia, fecha_ingreso_str, ministry, "activo"))
-    conn.commit()
-    conn.close()
-    st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
+# ================= REGISTRO DE MIEMBROS POR CÉLULA =================
+if menu == "👥 Registro de Miembros por Célula":
+    st.subheader("Registrar Miembros en una Célula")
+    lista_celulas = obtener_nombres_celulas()
+    with st.form("form_miembros_celula", clear_on_submit=True):
+        full_name = st.text_input("Nombre Completo")
+        age = st.number_input("Edad", min_value=1, max_value=120)
+        contact = st.text_input("Teléfono")  # ✅ usar 'contact'
+        cell = st.selectbox("Célula", lista_celulas)
+        sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
+        discipulado = st.radio("¿Está siendo discipulado?", ["Sí", "No"])
+        otra_iglesia = st.radio("¿Vino de otra iglesia?", ["Sí", "No"])
+        fecha_ingreso = st.date_input("Fecha de Ingreso")
+        fecha_ingreso_str = fecha_ingreso.strftime("%Y-%m-%d")  # ✅ convertir a texto
+        ministry = st.selectbox("Ministerio", ["Alabanza", "Ujieres", "Niños", "Intercesión", "Media", "Ninguno"])
+
+        # ✅ el botón y el insert deben estar dentro del 'with st.form'
+        if st.form_submit_button("Guardar Miembro"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute('''INSERT INTO members_stats 
+                (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (full_name, age, contact, cell, sex, discipulado, otra_iglesia, fecha_ingreso_str, ministry, "activo"))
+            conn.commit()
+            conn.close()
+            st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
 
     # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
 elif menu == "📝 Registro de Nuevos Convertidos":
