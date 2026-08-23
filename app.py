@@ -178,6 +178,7 @@ if st.session_state['logged_in']:
                 conn.close()
                 st.success(f"¡Miembro '{full_name}' registrado en la célula '{cell}'!")
 
+
     # ================= REGISTRO DE NUEVOS CONVERTIDOS =================
     elif menu == "📝 Registro de Nuevos Convertidos":
         st.subheader("Registrar Nuevos Convertidos")
