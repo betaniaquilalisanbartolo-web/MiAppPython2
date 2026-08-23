@@ -269,27 +269,10 @@ elif menu == "📊 Panel de Control y Reportes":
         df_descarriados = pd.DataFrame()
     conn.close()
 
-    # --- Filtrar datos del mes actual ---
-    hoy = datetime.date.today()
-    mes_actual = hoy.month
-    anio_actual = hoy.year
-
-    if not df_cell.empty and 'meeting_date' in df_cell.columns:
-        df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'], errors='coerce')
-        df_cell_mes = df_cell[(df_cell['meeting_date'].dt.month == mes_actual) & (df_cell['meeting_date'].dt.year == anio_actual)]
-    else:
-        df_cell_mes = pd.DataFrame()
-
-    if not df_converts.empty and 'conversion_date' in df_converts.columns:
-        df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'], errors='coerce')
-        df_converts_mes = df_converts[(df_converts['conversion_date'].dt.month == mes_actual) & (df_converts['conversion_date'].dt.year == anio_actual)]
-    else:
-        df_converts_mes = pd.DataFrame()
-
-    if not df_members.empty and 'discipleship_type' in df_members.columns:
-        discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"]
-    else:
-        discipulado_mes = pd.DataFrame()
+    # --- Usar todos los datos (sin filtro de fecha) ---
+    df_cell_mes = df_cell
+    df_converts_mes = df_converts
+    discipulado_mes = df_members[df_members['discipleship_type'] == "Sí"] if not df_members.empty else pd.DataFrame()
 
     # --- Gráfica de crecimiento por célula ---
     st.markdown("### 📈 Crecimiento de las Células (Miembros, Convertidos y Asistencia)")
@@ -326,10 +309,10 @@ elif menu == "📊 Panel de Control y Reportes":
     total_descarriados = len(df_descarriados) if not df_descarriados.empty else 0
 
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    with kpi1: st.metric("Ofrenda del Mes", f"${total_ofrenda_mes:,.2f}")
-    with kpi2: st.metric("Convertidos del Mes", f"{total_convertidos_mes} personas")
+    with kpi1: st.metric("Ofrenda Total", f"${total_ofrenda_mes:,.2f}")
+    with kpi2: st.metric("Convertidos Totales", f"{total_convertidos_mes} personas")
     with kpi3: st.metric("En Discipulado", f"{total_discipulado_mes} personas")
-    with kpi4: st.metric("Asistencia del Mes", f"{total_adultos + total_jovenes + total_ninos} asistencias")
+    with kpi4: st.metric("Asistencia Total", f"{total_adultos + total_jovenes + total_ninos} asistencias")
 
     kpi5, kpi6, kpi7, kpi8 = st.columns(4)
     with kpi5: st.metric("Total Amigos", f"{total_amigos}")
