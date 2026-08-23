@@ -386,7 +386,6 @@ if st.session_state['logged_in']:
             st.dataframe(df_cell)
         else:
             st.info("No hay reportes de cultos registrados aún.")
-izar métricas de asistencia.")
 
 elif menu == "📊 Panel de Control y Reportes":
     st.subheader("📊 Panel de Análisis Automático de la Iglesia")
