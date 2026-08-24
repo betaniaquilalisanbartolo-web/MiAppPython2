@@ -249,9 +249,9 @@ else:
                 conn.commit()
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
-                  # --- Administración ---
-    with tab5:
-     st.subheader("⚙️ Administración")
+                # --- Administración ---
+with tab5:
+    st.subheader("⚙️ Administración")
 
     st.markdown("### 🌱 Registrar nueva célula y líder")
     cell_name = st.text_input("Nombre de la célula")
@@ -267,10 +267,9 @@ else:
             st.error("Esa célula ya existe")
         conn.close()
 
-
-    # --- Panel ---
-    with tab6:
-     st.subheader("Panel de Control y Gráficas")
+# --- Panel ---
+with tab6:
+    st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
     conn = sqlite3.connect(DB_PATH)
@@ -342,5 +341,6 @@ else:
             st.bar_chart(ofrendas_por_celula)
         else:
             st.info("Agrega reportes de células para visualizar métricas de ofrendas.")
+
 
   
