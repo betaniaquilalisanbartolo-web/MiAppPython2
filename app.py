@@ -82,6 +82,11 @@ if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
     st.session_state["username"] = ""
 
+# --- Estado de sesión ---
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+    st.session_state["username"] = ""
+
 # --- Inicio/Login ---
 if not st.session_state["logged_in"]:
     st.subheader("🔑 Iniciar Sesión")
@@ -139,7 +144,6 @@ else:
     with tab6:
         st.subheader("Administración")
         # aquí pegas el bloque de administración (cuentas y células)
-
 
 
     # Registrar nueva célula
