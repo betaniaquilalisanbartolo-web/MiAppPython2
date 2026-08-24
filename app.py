@@ -250,7 +250,7 @@ else:
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
                 # --- Administración ---
-with tab5:
+   with tab5:
     st.subheader("⚙️ Administración")
 
     st.markdown("### 🌱 Registrar nueva célula y líder")
@@ -280,7 +280,7 @@ with tab5:
         conn.close()
         st.success("Todos los datos fueron eliminados. Ahora las tablas están vacías.")
         # --- Panel ---
-with tab6:
+   with tab6:
     st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
