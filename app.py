@@ -257,7 +257,7 @@ else:
         cell_name = st.text_input("Nombre de la célula")
         leader = st.text_input("Nombre del líder")
         if st.button("Registrar célula"):
-      conn = sqlite3.connect(DB_PATH)
+         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         try:
             c.execute("INSERT INTO cells (cell_name, leader) VALUES (?,?)", (cell_name, leader))
