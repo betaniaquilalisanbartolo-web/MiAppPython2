@@ -294,7 +294,7 @@ with tab6:
     conn.close()
     
     # --- Informe por célula ---
-st.markdown("### 📝 Informe por Célula")
+    st.markdown("### 📝 Informe por Célula")
 
 # Seleccionar célula
 if not df_reports.empty:
