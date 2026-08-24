@@ -1,6 +1,7 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
+import datetime
 
 DB_PATH = "C:/Users/Pc/Desktop/MiAppPython/MiAppPython2/MiBaseDatos/database.db"
 
@@ -9,14 +10,7 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    # Tabla de células
-    c.execute("""CREATE TABLE IF NOT EXISTS cells (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cell_name TEXT UNIQUE,
-        leader TEXT
-    )""")
-
-    # Tabla de miembros
+    # Crear tablas si no existen
     c.execute("""CREATE TABLE IF NOT EXISTS members_stats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name TEXT,
@@ -31,7 +25,6 @@ def init_db():
         status TEXT
     )""")
 
-    # Tabla de convertidos
     c.execute("""CREATE TABLE IF NOT EXISTS new_converts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name TEXT,
@@ -43,7 +36,6 @@ def init_db():
         conversion_date TEXT
     )""")
 
-    # Tabla de reportes
     c.execute("""CREATE TABLE IF NOT EXISTS cell_reports (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         cell_name TEXT,
@@ -62,7 +54,6 @@ def init_db():
         attendance_level INTEGER
     )""")
 
-    # Tabla de descarriados
     c.execute("""CREATE TABLE IF NOT EXISTS descarriados (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name TEXT,
@@ -79,7 +70,7 @@ def init_db():
 init_db()
 
 # --- Menú principal ---
-menu = st.sidebar.selectbox("Menú", ["🏠 Inicio", "👤 Registro de Miembros", "📊 Panel de Control y Reportes", "⚙️ Administración"])
+menu = st.sidebar.selectbox("Menú", ["🏠 Inicio", "👤 Registro de Miembros", "📊 Panel de Control y Reportes"])
 
 # --- Inicio ---
 if menu == "🏠 Inicio":
@@ -88,13 +79,7 @@ if menu == "🏠 Inicio":
 # --- Registro de Miembros ---
 elif menu == "👤 Registro de Miembros":
     st.subheader("Registro de Miembros")
-    conn = sqlite3.connect(DB_PATH)
-    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-    conn.close()
-    cell_options = cells['cell_name'].tolist() if not cells.empty else []
-    selected_cell = st.selectbox("Seleccione la célula", cell_options)
-
-    # Aquí iría el formulario para registrar miembros usando selected_cell
+    st.write("Aquí iría el formulario para registrar miembros.")
 
 # --- Panel de Control ---
 elif menu == "📊 Panel de Control y Reportes":
@@ -107,31 +92,75 @@ elif menu == "📊 Panel de Control y Reportes":
     df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
     conn.close()
 
-    # Mostrar datos generales de cada miembro
+    # --- Gráfica de crecimiento por célula ---
+    if not df_members.empty or not df_converts.empty or not df_cell.empty:
+        miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
+        miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
+
+        convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
+        convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
+
+        asistencia_por_celula = df_cell.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
+
+        crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
+                               left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
+        crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
+        crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
+
+        crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
+        crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
+
+        st.dataframe(crecimiento)
+        st.bar_chart(crecimiento.set_index("Célula"))
+    else:
+        st.info("Aún no hay datos suficientes para mostrar la gráfica de crecimiento.")
+
+    # --- KPIs ---
+    total_ofrenda = df_cell['offering'].sum() if not df_cell.empty else 0.0
+    total_convertidos = len(df_converts) if not df_converts.empty else 0
+    total_discipulado = len(df_members[df_members['discipleship_type']=="Sí"]) if not df_members.empty else 0
+    total_amigos = df_cell['friends'].sum() if not df_cell.empty else 0
+    total_ninos = df_cell['children'].sum() if not df_cell.empty else 0
+    total_jovenes = df_cell['youth'].sum() if not df_cell.empty else 0
+    total_adultos = df_cell['adults'].sum() if not df_cell.empty else 0
+    total_descarriados = len(df_descarriados) if not df_descarriados.empty else 0
+
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    with kpi1: st.metric("Ofrenda Total", f"${total_ofrenda:,.2f}")
+    with kpi2: st.metric("Convertidos Totales", f"{total_convertidos}")
+    with kpi3: st.metric("En Discipulado", f"{total_discipulado}")
+    with kpi4: st.metric("Asistencia Total", f"{total_adultos + total_jovenes + total_ninos}")
+
+    kpi5, kpi6, kpi7, kpi8 = st.columns(4)
+    with kpi5: st.metric("Total Amigos", f"{total_amigos}")
+    with kpi6: st.metric("Total Niños", f"{total_ninos}")
+    with kpi7: st.metric("Total Jóvenes", f"{total_jovenes}")
+    with kpi8: st.metric("Total Adultos", f"{total_adultos}")
+
+    st.metric("Miembros Descarriados", f"{total_descarriados}")
+    if not df_descarriados.empty:
+        st.markdown("### 🚨 Lista de Descarriados")
+        st.dataframe(df_descarriados)
+
+    # --- Nombres de miembros y convertidos ---
     if not df_members.empty:
-        st.markdown("### 👥 Datos Generales de Miembros por Célula")
-        st.dataframe(df_members)
+        st.markdown("### 👥 Miembros por Célula")
+        miembros_por_celula = df_members.groupby("cell")["full_name"].apply(list).reset_index()
+        for _, fila in miembros_por_celula.iterrows():
+            st.write(f"**{fila['cell']}**: {', '.join(fila['full_name'])}")
 
-        # Botón para exportar
-        csv = df_members.to_csv(index=False).encode('utf-8')
-        st.download_button("📄 Descargar datos en CSV", csv, "miembros.csv", "text/csv")
+    if not df_converts.empty:
+        st.markdown("### 🙌 Convertidos por Célula")
+        convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].apply(list).reset_index()
+        for _, fila in convertidos_por_celula.iterrows():
+            st.write(f"**{fila['assigned_cell']}**: {', '.join(fila['full_name'])}")
 
-    # Aquí mantienes las gráficas y KPIs como antes
+    # --- Tablas detalladas ---
+    st.markdown("### 📌 Reportes de Células")
+    st.dataframe(df_cell)
 
-# --- Administración ---
-elif menu == "⚙️ Administración":
-    st.subheader("Panel de Administración")
+    st.markdown("### 👤 Nuevos Convertidos")
+    st.dataframe(df_converts)
 
-    # Registrar nueva célula y líder
-    with st.form("nueva_celula"):
-        cell_name = st.text_input("Nombre de la célula")
-        leader = st.text_input("Nombre del líder")
-        submit = st.form_submit_button("Registrar")
-
-        if submit and cell_name:
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("INSERT OR IGNORE INTO cells (cell_name, leader) VALUES (?,?)", (cell_name, leader))
-            conn.commit()
-            conn.close()
-            st.success(f"Célula '{cell_name}' registrada con líder {leader}")
+    st.markdown("### 📖 Miembros en Discipulado")
+    st.dataframe(df_members[df_members['discipleship_type']=="Sí"])
