@@ -291,7 +291,7 @@ with tab6:
     df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
     conn.close()
 
-    # KPIs
+    # --- TARJETAS MÉTRICAS (KPIs) ---
     st.markdown("### 📈 Indicadores Clave del Sistema")
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
     with kpi1:
@@ -309,22 +309,22 @@ with tab6:
 
     st.markdown("---")
 
-    # Convertidos por mes
+    # --- Convertidos por mes ---
     if not df_conv.empty:
-        df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'])
+        df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'], errors='coerce')
         conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
         st.line_chart(conv_mes)
 
-    # Reportes
+    # --- Reportes: amigos y asistencia ---
     if not df_reports.empty:
-        df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'])
+        df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'], errors='coerce')
         amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
         st.bar_chart(amigos_mes)
 
         crecimiento = df_reports.groupby('cell_name')['attendance_level'].sum()
         st.bar_chart(crecimiento)
 
-    # Crecimiento y deserciones
+    # --- Crecimiento y deserciones ---
     if not df_members.empty or not df_descarriados.empty:
         st.markdown("### 👥 Crecimiento y Deserciones")
         df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
@@ -337,13 +337,13 @@ with tab6:
         }).fillna(0)
         st.line_chart(grafico_crecimiento)
 
-    # Amigos alcanzados
+    # --- Amigos alcanzados por mes ---
     if not df_reports.empty:
         st.markdown("### 🤝 Amigos Alcanzados por Mes")
         amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
         st.area_chart(amigos_mes)
 
-    # Asistencia y ofrendas
+    # --- Asistencia y ofrendas ---
     if not df_reports.empty:
         st.markdown("### 📊 Gráficos de Células y Finanzas")
         grafico1, grafico2 = st.columns(2)
@@ -362,3 +362,4 @@ with tab6:
             st.write("💰 *Ofrendas por Célula*")
             ofrendas_por_celula = df_reports.groupby('cell_name')['offering'].sum()
             st.bar_chart(ofrendas_por_celula)
+
