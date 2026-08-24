@@ -252,80 +252,95 @@ else:
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
 
 
- # --- Panel ---
-    with tab5:
-        st.subheader("Panel de Control y Gráficas")
-        conn = sqlite3.connect(DB_PATH)
-        df_conv = pd.read_sql_query("SELECT * FROM new_converts", conn)
-        df_reports = pd.read_sql_query("SELECT * FROM cell_reports", conn)
-        conn.close()
+# --- Panel ---
+with tab5:
+    st.subheader("Panel de Control y Gráficas")
 
-        if not df_conv.empty:
-            df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'])
-            conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
-            st.line_chart(conv_mes)
+    # Conexión y carga de datos
+    conn = sqlite3.connect(DB_PATH)
+    df_conv = pd.read_sql_query("SELECT * FROM new_converts", conn)
+    df_reports = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+    df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+    conn.close()
 
-        if not df_reports.empty:
-            df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'])
-            amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
-            st.bar_chart(amigos_mes)
+    # Gráficas de convertidos por mes
+    if not df_conv.empty:
+        df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'])
+        conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
+        st.line_chart(conv_mes)
 
-            crecimiento = df_reports.groupby('cell_name')['attendance_level'].sum()
-            st.bar_chart(crecimiento)
+    # Gráficas de reportes
+    if not df_reports.empty:
+        df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'])
+        amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
+        st.bar_chart(amigos_mes)
 
-    # --- Administración ---
-    with tab6:
-        st.subheader("⚙️ Administración")
+        crecimiento = df_reports.groupby('cell_name')['attendance_level'].sum()
+        st.bar_chart(crecimiento)
 
-        st.markdown("### 🌱 Registrar nueva célula y líder")
-        cell_name = st.text_input("Nombre de la célula")
-        leader = st.text_input("Nombre del líder")
-        if st.button("Registrar célula"):
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            try:
-                c.execute("INSERT INTO cells (cell_name, leader) VALUES (?,?)", (cell_name, leader))
-                conn.commit()
-                st.success(f"Célula '{cell_name}' registrada con líder {leader}")
-            except sqlite3.IntegrityError:
-                st.error("Esa célula ya existe")
-            conn.close()
-
-    # --- 1. TARJETAS MÉTRICAS AUTOMÁTICAS (KPIs) ---
+    # --- TARJETAS MÉTRICAS (KPIs) ---
     st.markdown("### 📈 Indicadores Clave del Sistema")
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    
+
     with kpi1:
-        total_ofrenda = df_cell['offering'].sum() if not df_cell.empty else 0.0
+        total_ofrenda = df_reports['offering'].sum() if not df_reports.empty else 0.0
         st.metric("Total Ofrendas", f"${total_ofrenda:,.2f}")
+
     with kpi2:
-        total_nuevos = len(df_converts)
+        total_nuevos = len(df_conv) if not df_conv.empty else 0
         st.metric("Nuevos Convertidos", f"{total_nuevos} personas")
+
     with kpi3:
         miembros_activos = len(df_members[df_members['status'] == 'activo']) if not df_members.empty else 0
         st.metric("Miembros Activos", f"{miembros_activos} personas")
+
     with kpi4:
-        total_asistencia = (df_cell['adults'].sum() + df_cell['youth'].sum() + df_cell['children'].sum()) if not df_cell.empty else 0
+        total_asistencia = df_reports['attendance_level'].sum() if not df_reports.empty else 0
         st.metric("Impacto Total Asistencia", f"{total_asistencia} asistencias")
 
     st.markdown("---")
 
-    # --- 2. ANÁLISIS GRÁFICO DE CÉLULAS Y OFRENDAS ---
+    # --- ANÁLISIS GRÁFICO DE CÉLULAS Y OFRENDAS ---
     st.markdown("### 📊 Gráficos de Células y Finanzas")
     grafico1, grafico2 = st.columns(2)
 
     with grafico1:
-        st.write("🏃‍♂️ *Asistencia Acumulada por Edad/Rol*")
-        if not df_cell.empty:
+        st.write("🏃‍♂️ *Asistencia Acumulada por Categoría*")
+        if not df_reports.empty:
             data_asistencia = {
                 'Categoría': ['Adultos', 'Jóvenes', 'Niños', 'Amigos', 'Visitas'],
                 'Cantidad': [
-                    df_cell['adults'].sum(), df_cell['youth'].sum(), df_cell['children'].sum(),
-                    df_cell['friends'].sum(), df_cell['visits'].sum()
+                    df_reports['adults'].sum(), df_reports['youth'].sum(),
+                    df_reports['children'].sum(), df_reports['friends'].sum(),
+                    df_reports['visits'].sum()
                 ]
             }
-            st.bar_chart(data=pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
+            st.bar_chart(pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
         else:
             st.info("Agrega reportes de células para visualizar métricas de asistencia.")
 
+    with grafico2:
+        st.write("💰 *Ofrendas por Célula*")
+        if not df_reports.empty:
+            ofrendas_por_celula = df_reports.groupby('cell_name')['offering'].sum()
+            st.bar_chart(ofrendas_por_celula)
+        else:
+            st.info("Agrega reportes de células para visualizar métricas de ofrendas.")
 
+# --- Administración ---
+with tab6:
+    st.subheader("⚙️ Administración")
+
+    st.markdown("### 🌱 Registrar nueva célula y líder")
+    cell_name = st.text_input("Nombre de la célula")
+    leader = st.text_input("Nombre del líder")
+    if st.button("Registrar célula"):
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        try:
+            c.execute("INSERT INTO cells (cell_name, leader) VALUES (?,?)", (cell_name, leader))
+            conn.commit()
+            st.success(f"Célula '{cell_name}' registrada con líder {leader}")
+        except sqlite3.IntegrityError:
+            st.error("Esa célula ya existe")
+        conn.close()
