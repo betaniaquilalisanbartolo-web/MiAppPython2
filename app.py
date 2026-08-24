@@ -222,7 +222,6 @@ else:
                 conn.commit()
                 conn.close()
                 st
-
     # --- Descarriados ---
     with tab4:
         st.subheader("Registro de Descarriados")
