@@ -205,12 +205,14 @@ elif menu == "📊 Panel de Control y Reportes":
         st.markdown("### 🤝 Amigos Evangelizados por Semana")
         st.line_chart(friends_by_week)
 
-    # Gráfica de crecimiento por célula
+        # Gráfica de crecimiento por célula
     if not df_members.empty or not df_converts.empty or not df_cell.empty:
         miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
         miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
+
         convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
         convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
+
         asistencia_por_celula = df_cell.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
 
         crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
@@ -221,4 +223,6 @@ elif menu == "📊 Panel de Control y Reportes":
         crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
         crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
 
-        st.markdown("### 🌱 Crecimiento por Célula
+        st.markdown("### 🌱 Crecimiento por Célula")
+        st.dataframe(crecimiento)
+        st.bar_chart(crecimiento.set_index("Célula"))
