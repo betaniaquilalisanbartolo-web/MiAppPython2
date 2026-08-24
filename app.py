@@ -2,7 +2,8 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 
-DB_PATH = "C:/Users/Pc/Desktop/MiAppPython/MiAppPython2/MiBaseDatos/database.db"
+import os
+DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
 
 # --- Inicializar base de datos ---
 def init_db():
