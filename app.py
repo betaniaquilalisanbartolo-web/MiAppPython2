@@ -150,19 +150,23 @@ elif menu == "⚙️ Administración":
 
 # --- Registro de Miembros ---
 elif menu == "👤 Registro de Miembros":
-    # (bloque de formulario de miembros que ya te pasé)
+    st.subheader("Registro de Miembros")
+    # (pega aquí el bloque de formulario de miembros que ya te pasé)
 
 # --- Registro de Convertidos ---
 elif menu == "🙌 Registro de Convertidos":
-    # (bloque de formulario de convertidos)
+    st.subheader("Registro de Nuevos Convertidos")
+    # (pega aquí el bloque de formulario de convertidos)
 
 # --- Reportes de Células ---
 elif menu == "📌 Reportes de Células":
-    # (bloque de formulario de reportes)
+    st.subheader("Registro de Reportes de Células")
+    # (pega aquí el bloque de formulario de reportes)
 
 # --- Registro de Descarriados ---
 elif menu == "🚨 Registro de Descarriados":
-    # (bloque de formulario de descarriados)
+    st.subheader("Registro de Descarriados")
+    # (pega aquí el bloque de formulario de descarriados)
 
 # --- Panel de Control ---
 elif menu == "📊 Panel de Control y Reportes":
@@ -175,37 +179,23 @@ elif menu == "📊 Panel de Control y Reportes":
     df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
     conn.close()
 
-    # --- KPIs ---
+    # KPIs
     total_ofrenda = df_cell['offering'].sum() if not df_cell.empty else 0.0
     total_convertidos = len(df_converts) if not df_converts.empty else 0
-    total_discipulado = len(df_members[df_members['discipleship_type']=="Sí"]) if not df_members.empty else 0
     total_amigos = df_cell['friends'].sum() if not df_cell.empty else 0
-    total_ninos = df_cell['children'].sum() if not df_cell.empty else 0
-    total_jovenes = df_cell['youth'].sum() if not df_cell.empty else 0
-    total_adultos = df_cell['adults'].sum() if not df_cell.empty else 0
-    total_descarriados = len(df_descarriados) if not df_descarriados.empty else 0
 
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    with kpi1: st.metric("💰 Ofrenda Total", f"${total_ofrenda:,.2f}")
-    with kpi2: st.metric("🙌 Convertidos Totales", f"{total_convertidos}")
-    with kpi3: st.metric("✝️ En Discipulado", f"{total_discipulado}")
-    with kpi4: st.metric("👥 Asistencia Total", f"{total_adultos + total_jovenes + total_ninos}")
+    st.metric("💰 Ofrenda Total", f"${total_ofrenda:,.2f}")
+    st.metric("🙌 Convertidos Totales", f"{total_convertidos}")
+    st.metric("🤝 Amigos Evangelizados", f"{total_amigos}")
 
-    kpi5, kpi6, kpi7, kpi8 = st.columns(4)
-    with kpi5: st.metric("🤝 Total Amigos", f"{total_amigos}")
-    with kpi6: st.metric("👶 Total Niños", f"{total_ninos}")
-    with kpi7: st.metric("🧑‍🎓 Total Jóvenes", f"{total_jovenes}")
-    with kpi8: st.metric("🧑 Total Adultos", f"{total_adultos}")
-
-    st.metric("🚨 Miembros Descarriados", f"{total_descarriados}")
-
-    # --- Gráficas ---
+    # Gráfica de convertidos por mes
     if not df_converts.empty:
         df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'])
         converts_by_month = df_converts.groupby(df_converts['conversion_date'].dt.to_period("M")).size()
         st.markdown("### 📈 Nuevos Convertidos por Mes")
         st.bar_chart(converts_by_month)
 
+    # Gráficas de amigos evangelizados
     if not df_cell.empty:
         df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'])
         friends_by_month = df_cell.groupby(df_cell['meeting_date'].dt.to_period("M"))['friends'].sum()
@@ -215,5 +205,20 @@ elif menu == "📊 Panel de Control y Reportes":
         st.markdown("### 🤝 Amigos Evangelizados por Semana")
         st.line_chart(friends_by_week)
 
+    # Gráfica de crecimiento por célula
     if not df_members.empty or not df_converts.empty or not df_cell.empty:
-        miembros_por_celula = df_members.groupby
+        miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
+        miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
+        convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
+        convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
+        asistencia_por_celula = df_cell.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
+
+        crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
+                               left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
+        crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
+        crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
+
+        crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
+        crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
+
+        st.markdown("### 🌱 Crecimiento por Célula
