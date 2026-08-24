@@ -80,11 +80,10 @@ if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
     st.session_state["username"] = ""
 
-# --- Inicio/Login y Registro en pestañas ---
+# --- Inicio/Login y Registro ---
 if not st.session_state["logged_in"]:
     tab_login, tab_register = st.tabs(["🔑 Iniciar Sesión", "🆕 Registrar Cuenta"])
 
-    # Pestaña de Login
     with tab_login:
         st.subheader("Iniciar Sesión")
         username = st.text_input("Usuario")
@@ -102,7 +101,6 @@ if not st.session_state["logged_in"]:
             else:
                 st.error("Usuario o contraseña incorrectos")
 
-    # Pestaña de Registro
     with tab_register:
         st.subheader("Registrar nueva cuenta")
         new_user = st.text_input("Nuevo usuario")
@@ -133,6 +131,7 @@ else:
         "⚙️ Administración",
         "📊 Panel"
     ])
+
     # --- Miembros ---
     with tab1:
         st.subheader("Registro de Miembros")
@@ -222,7 +221,7 @@ else:
                     (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
                 conn.commit()
                 conn.close()
-                st.success(f"Reporte registrado para la célula {cell_name}")
+                st
 
     # --- Descarriados ---
     with tab4:
