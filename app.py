@@ -82,16 +82,21 @@ def init_db():
 
 init_db()
 
+# --- Estado de sesión ---
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+    st.session_state["username"] = ""
+
+# --- Inicio/Login y Registro en pestañas ---
 if not st.session_state["logged_in"]:
-    st.subheader("🔑 Iniciar Sesión")
+    tab_login, tab_register = st.tabs(["🔑 Iniciar Sesión", "🆕 Registrar Cuenta"])
 
-    col1, col2 = st.columns(2)
-
-    # Columna izquierda: Login
-    with col1:
+    # Pestaña de Login
+    with tab_login:
+        st.subheader("Iniciar Sesión")
         username = st.text_input("Usuario")
         password = st.text_input("Contraseña", type="password")
-        if st.button("Iniciar sesión"):
+        if st.button("Entrar"):
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute("SELECT * FROM accounts WHERE username=? AND password=?", (username, password))
@@ -104,12 +109,12 @@ if not st.session_state["logged_in"]:
             else:
                 st.error("Usuario o contraseña incorrectos")
 
-    # Columna derecha: Registro de nueva cuenta
-    with col2:
-        st.subheader("🆕 Registrar nueva cuenta")
+    # Pestaña de Registro
+    with tab_register:
+        st.subheader("Registrar nueva cuenta")
         new_user = st.text_input("Nuevo usuario")
         new_pass = st.text_input("Nueva contraseña", type="password")
-        if st.button("Registrar cuenta"):
+        if st.button("Registrar"):
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             try:
@@ -119,6 +124,14 @@ if not st.session_state["logged_in"]:
             except sqlite3.IntegrityError:
                 st.error("Ese usuario ya existe")
             conn.close()
+
+else:
+    st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
+    if st.button("Cerrar sesión"):
+        st.session_state["logged_in"] = False
+        st.session_state["username"] = ""
+
+    # Aquí van las pestañas principales de Miembros, Convertidos, Reportes, Descarriados, Panel y Administración
 
 
     # --- Pestañas principales ---
