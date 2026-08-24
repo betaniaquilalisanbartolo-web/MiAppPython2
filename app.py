@@ -167,11 +167,6 @@ else:
 # --- Convertidos ---
 with tab2:
     st.subheader("Registro de Convertidos")
-    # resto del código...
-
-# --- Convertidos ---
-with tab2:
-    st.subheader("Registro de Convertidos")
     conn = sqlite3.connect(DB_PATH)
     cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
     conn.close()
