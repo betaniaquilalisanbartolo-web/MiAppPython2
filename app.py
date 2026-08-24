@@ -338,7 +338,7 @@ else:
     st.markdown("---")
 
     # Convertidos por mes
-  if not df_conv.empty:
+   if not df_conv.empty:
         df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'], errors='coerce')
         conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
         st.line_chart(conv_mes)
