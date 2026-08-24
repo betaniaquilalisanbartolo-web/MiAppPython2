@@ -365,7 +365,7 @@ with tab6:
             
             # --- Gráfica de crecimiento de miembros y deserciones ---
             if not df_members.empty or not df_descarriados.empty:
-    st.markdown("### 📊 Comparación de Crecimiento vs Deserciones")
+            st.markdown("### 📊 Comparación de Crecimiento vs Deserciones")
 
     # Convertir fechas a formato datetime
     df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
