@@ -2,6 +2,7 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import os
+
 # --- Estado de sesión ---
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
@@ -107,6 +108,38 @@ if not st.session_state["logged_in"]:
                 st.success(f"Bienvenido {username}")
             else:
                 st.error("Usuario o contraseña incorrectos")
+
+    # Pestaña de Registro
+    with tab_register:
+        st.subheader("Registrar nueva cuenta")
+        new_user = st.text_input("Nuevo usuario")
+        new_pass = st.text_input("Nueva contraseña", type="password")
+        if st.button("Registrar"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            try:
+                c.execute("INSERT INTO accounts (username, password) VALUES (?,?)", (new_user, new_pass))
+                conn.commit()
+                st.success(f"Cuenta '{new_user}' creada correctamente")
+            except sqlite3.IntegrityError:
+                st.error("Ese usuario ya existe")
+            conn.close()
+
+else:
+    st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
+    if st.button("Cerrar sesión"):
+        st.session_state["logged_in"] = False
+        st.session_state["username"] = ""
+
+    # --- Pestañas principales ---
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "👤 Miembros",
+        "🙌 Convertidos",
+        "📌 Reportes",
+        "🚨 Descarriados",
+        "📊 Panel",
+        "⚙️ Administración"
+    ])
 
     # Pestaña de Registro
     with tab_register:
