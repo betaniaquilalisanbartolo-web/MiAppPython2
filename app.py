@@ -124,16 +124,16 @@ else:
         st.session_state["logged_in"] = False
         st.session_state["username"] = ""
 
-    # --- Pestañas principales ---
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "👤 Miembros",
-        "🙌 Convertidos",
-        "📌 Reportes",
-        "🚨 Descarriados",
-        "⚙️ Administración"
-        "📊 Panel",
-       
-    ])
+  # --- Pestañas principales ---
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "👤 Miembros",
+    "🙌 Convertidos",
+    "📌 Reportes",
+    "🚨 Descarriados",
+    "⚙️ Administración",
+    "📊 Panel"
+])
+
 
     # --- Miembros ---
     with tab1:
