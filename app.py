@@ -118,27 +118,27 @@ else:
 
     with tab1:
         st.subheader("Registro de Miembros")
-        # aquí pegas el formulario de miembros
+        # formulario de miembros
 
     with tab2:
         st.subheader("Registro de Convertidos")
-        # aquí pegas el formulario de convertidos
+        # formulario de convertidos
 
     with tab3:
         st.subheader("Reportes de Células")
-        # aquí pegas el formulario de reportes
+        # formulario de reportes
 
     with tab4:
         st.subheader("Registro de Descarriados")
-        # aquí pegas el formulario de descarriados
+        # formulario de descarriados
 
     with tab5:
         st.subheader("Panel de Control y Gráficas")
-        # aquí pegas el bloque del panel con KPIs y gráficas
+        # KPIs y gráficas
 
     with tab6:
         st.subheader("Administración")
-        # aquí pegas el bloque de administración (cuentas y células)
+        # cuentas y células
 
 
     # Registrar nueva célula
