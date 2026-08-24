@@ -254,7 +254,7 @@ with tab4:
 with tab5:
         st.subheader("⚙️ Administración")
 
-    st.markdown("### 🌱 Registrar nueva célula y líder")
+        st.markdown("### 🌱 Registrar nueva célula y líder")
     cell_name = st.text_input("Nombre de la célula")
     leader = st.text_input("Nombre del líder")
 
