@@ -399,22 +399,3 @@ with tab6:
         amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
         st.area_chart(amigos_mes)
 
-    # --- Asistencia y ofrendas ---
-    if not df_reports.empty:
-        st.markdown("### 📊 Gráficos de Células y Finanzas")
-        grafico1, grafico2 = st.columns(2)
-        with grafico1:
-            st.write("🏃‍♂️ *Asistencia Acumulada por Categoría*")
-            data_asistencia = {
-                'Categoría': ['Adultos', 'Jóvenes', 'Niños', 'Amigos', 'Visitas'],
-                'Cantidad': [
-                    df_reports['adults'].sum(), df_reports['youth'].sum(),
-                    df_reports['children'].sum(), df_reports['friends'].sum(),
-                    df_reports['visits'].sum()
-                ]
-            }
-            st.bar_chart(pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
-        with grafico2:
-            st.write("💰 *Ofrendas por Célula*")
-            ofrendas_por_celula = df_reports.groupby('cell_name')['offering'].sum()
-            st.bar_chart(ofrendas_por_celula)
