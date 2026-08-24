@@ -306,6 +306,3 @@ with tab6:
     with kpi4:
         total_asistencia = df_reports['attendance_level'].sum() if not df_reports.empty else 0
         st.metric("Impacto Total Asistencia", f"{total_asistencia} asistencias")
-
-    st.markdown("---")
-
