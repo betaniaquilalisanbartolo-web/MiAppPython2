@@ -235,3 +235,7 @@ elif menu == "📌 Reportes de Células":
 
     with st.form("registro_reporte"):
         cell_name = st.selectbox("Célula", cell_options)
+        meeting_date = st.date_input("Fecha de reunión")
+        adults = st.number_input("Adultos", min_value=0)
+        youth = st.number_input("Jóvenes", min_value=0)
+        children
