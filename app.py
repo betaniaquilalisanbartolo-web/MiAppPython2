@@ -256,7 +256,7 @@ with tab5:
 
         st.markdown("### 🌱 Registrar nueva célula y líder")
         cell_name = st.text_input("Nombre de la célula")
-    leader = st.text_input("Nombre del líder")
+        leader = st.text_input("Nombre del líder")
 
     if st.button("Registrar célula"):
         conn = sqlite3.connect(DB_PATH)
