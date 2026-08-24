@@ -117,10 +117,9 @@ if not st.session_state["logged_in"]:
             except sqlite3.IntegrityError:
                 st.error("Ese usuario ya existe")
             conn.close()
-
-    else:
-    st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
-    if st.button("Cerrar sesión"):
+        else:
+        t.info(f"Ya has iniciado sesión como {st.session_state['username']}
+        if st.button("Cerrar sesión"):
         st.session_state["logged_in"] = False
         st.session_state["username"] = ""
 
