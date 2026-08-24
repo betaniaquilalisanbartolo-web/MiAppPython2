@@ -1,3 +1,80 @@
+import streamlit as st
+import sqlite3
+import pandas as pd
+import os
+
+# --- Base de datos ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "database.db")
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    # Tablas principales
+    c.execute("""CREATE TABLE IF NOT EXISTS accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS cells (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cell_name TEXT UNIQUE,
+        leader TEXT
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS members_stats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        full_name TEXT,
+        age INTEGER,
+        contact TEXT,
+        cell TEXT,
+        sex TEXT,
+        discipleship_type TEXT,
+        other_church TEXT,
+        ingreso_date TEXT,
+        ministry TEXT,
+        status TEXT
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS new_converts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        full_name TEXT,
+        age INTEGER,
+        contact TEXT,
+        address TEXT,
+        assigned_cell TEXT,
+        decision_type TEXT,
+        conversion_date TEXT
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS cell_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cell_name TEXT,
+        meeting_date TEXT,
+        adults INTEGER,
+        youth INTEGER,
+        children INTEGER,
+        friends INTEGER,
+        visits INTEGER,
+        house_leader TEXT,
+        biblical_theme TEXT,
+        central_text TEXT,
+        offering REAL,
+        needs TEXT,
+        spiritual_level TEXT,
+        attendance_level INTEGER
+    )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS descarriados (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        full_name TEXT,
+        age INTEGER,
+        contact TEXT,
+        cell TEXT,
+        reason TEXT,
+        date_reported TEXT
+    )""")
+    conn.commit()
+    conn.close()
+
+init_db()
+
 # --- Estado de sesión ---
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
