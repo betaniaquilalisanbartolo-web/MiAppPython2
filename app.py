@@ -1,5 +1,5 @@
 # --- Inicio/Login y Registro en pestañas ---
-if not st.session_state["logged_in"]:
+ if not st.session_state["logged_in"]:
     tab_login, tab_register = st.tabs(["🔑 Iniciar Sesión", "🆕 Registrar Cuenta"])
 
     # Pestaña de Login
