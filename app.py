@@ -338,13 +338,13 @@ else:
     st.markdown("---")
 
     # Convertidos por mes
-if not df_conv.empty:
+  if not df_conv.empty:
         df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'], errors='coerce')
         conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
         st.line_chart(conv_mes)
 
     # Reportes
-if not df_reports.empty:
+  if not df_reports.empty:
         df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'], errors='coerce')
         amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
         st.bar_chart(amigos_mes)
@@ -353,7 +353,7 @@ if not df_reports.empty:
         st.bar_chart(crecimiento)
 
     # Crecimiento y deserciones
-if not df_members.empty or not df_descarriados.empty:
+  if not df_members.empty or not df_descarriados.empty:
         st.markdown("### 👥 Crecimiento y Deserciones")
         df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
         df_descarriados['date_reported'] = pd.to_datetime(df_descarriados['date_reported'], errors='coerce')
@@ -366,13 +366,13 @@ if not df_members.empty or not df_descarriados.empty:
         st.line_chart(grafico_crecimiento)
 
     # Amigos alcanzados
-if not df_reports.empty:
+  if not df_reports.empty:
         st.markdown("### 🤝 Amigos Alcanzados por Mes")
         amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
         st.area_chart(amigos_mes)
 
     # Asistencia y ofrendas
-if not df_reports.empty:
+  if not df_reports.empty:
         st.markdown("### 📊 Gráficos de Células y Finanzas")
         grafico1, grafico2 = st.columns(2)
         with grafico1:
@@ -404,7 +404,7 @@ with tab6:
     conn.close()
 
     # --- Gráfica de crecimiento vs deserciones ---
-if not df_members.empty or not df_descarriados.empty:
+  if not df_members.empty or not df_descarriados.empty:
         st.markdown("### 📊 Comparación de Crecimiento vs Deserciones")
 
         # Convertir fechas
