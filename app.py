@@ -77,67 +77,63 @@ def init_db():
 
 init_db()
 
-# --- Estado de sesión ---
-if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = False
-    st.session_state["username"] = ""
+# --- Inicio/Login ---
+st.subheader("🔑 Iniciar Sesión")
+username = st.text_input("Usuario")
+password = st.text_input("Contraseña", type="password")
+if st.button("Iniciar sesión"):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT * FROM accounts WHERE username=? AND password=?", (username, password))
+    user = c.fetchone()
+    conn.close()
+    if user:
+        st.session_state["logged_in"] = True
+        st.session_state["username"] = username
+        st.success(f"Bienvenido {username}")
+    else:
+        st.error("Usuario o contraseña incorrectos")
 
-# --- Menú dinámico ---
-if not st.session_state["logged_in"]:
-    menu = st.sidebar.selectbox("Menú", ["🏠 Inicio (Login)"])
-else:
-    menu = st.sidebar.selectbox("Menú", [
-        "🏠 Inicio (Login)",
-        "👤 Registro de Miembros",
-        "🙌 Registro de Convertidos",
-        "📌 Reportes de Células",
-        "🚨 Registro de Descarriados",
-        "📊 Panel de Control y Reportes",
+if st.session_state["logged_in"]:
+    st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
+    if st.button("Cerrar sesión"):
+        st.session_state["logged_in"] = False
+        st.session_state["username"] = ""
+
+    # --- Pestañas principales ---
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "👤 Miembros",
+        "🙌 Convertidos",
+        "📌 Reportes",
+        "🚨 Descarriados",
+        "📊 Panel",
         "⚙️ Administración"
     ])
 
-# --- Inicio/Login ---
-if menu == "🏠 Inicio (Login)":
-    st.subheader("🔑 Iniciar Sesión")
-    username = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
-    if st.button("Iniciar sesión"):
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT * FROM accounts WHERE username=? AND password=?", (username, password))
-        user = c.fetchone()
-        conn.close()
-        if user:
-            st.session_state["logged_in"] = True
-            st.session_state["username"] = username
-            st.success(f"Bienvenido {username}")
-        else:
-            st.error("Usuario o contraseña incorrectos")
+    with tab1:
+        st.subheader("Registro de Miembros")
+        # aquí pegas el formulario de miembros
 
-    if st.session_state["logged_in"]:
-        st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
-        if st.button("Cerrar sesión"):
-            st.session_state["logged_in"] = False
-            st.session_state["username"] = ""
+    with tab2:
+        st.subheader("Registro de Convertidos")
+        # aquí pegas el formulario de convertidos
 
-# --- Administración ---
-elif menu == "⚙️ Administración":
-    st.subheader("⚙️ Panel de Administración")
+    with tab3:
+        st.subheader("Reportes de Células")
+        # aquí pegas el formulario de reportes
 
-    # Registrar nueva cuenta
-    st.markdown("### 🆕 Registrar nueva cuenta")
-    new_user = st.text_input("Nuevo usuario")
-    new_pass = st.text_input("Nueva contraseña", type="password")
-    if st.button("Registrar cuenta"):
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        try:
-            c.execute("INSERT INTO accounts (username, password) VALUES (?,?)", (new_user, new_pass))
-            conn.commit()
-            st.success(f"Cuenta '{new_user}' creada correctamente")
-        except sqlite3.IntegrityError:
-            st.error("Ese usuario ya existe")
-        conn.close()
+    with tab4:
+        st.subheader("Registro de Descarriados")
+        # aquí pegas el formulario de descarriados
+
+    with tab5:
+        st.subheader("Panel de Control y Gráficas")
+        # aquí pegas el bloque del panel con KPIs y gráficas
+
+    with tab6:
+        st.subheader("Administración")
+        # aquí pegas el bloque de administración (cuentas y células)
+
 
     # Registrar nueva célula
     st.markdown("### 🌱 Registrar nueva célula y líder")
