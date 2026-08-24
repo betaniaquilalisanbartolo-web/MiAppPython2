@@ -252,7 +252,7 @@ with tab4:
                 
 # --- Administración ---
 with tab5:
-    st.subheader("⚙️ Administración")
+        st.subheader("⚙️ Administración")
 
     st.markdown("### 🌱 Registrar nueva célula y líder")
     cell_name = st.text_input("Nombre de la célula")
@@ -283,7 +283,7 @@ with tab5:
         
 # --- Panel ---
 with tab6:
-    st.subheader("📊 Panel de Control y Gráficas")
+        st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
     conn = sqlite3.connect(DB_PATH)
@@ -294,7 +294,7 @@ with tab6:
     conn.close()
     
     # --- Informe por célula ---
-    st.markdown("### 📝 Informe por Célula")
+       st.markdown("### 📝 Informe por Célula")
 
 # Seleccionar célula
 if not df_reports.empty:
@@ -309,7 +309,7 @@ if not df_reports.empty:
 
     # Botón para descargar
     csv = informe_celula.to_csv(index=False).encode('utf-8')
-    st.download_button(
+        st.download_button(
         label="📥 Descargar informe en CSV",
         data=csv,
         file_name=f"informe_{celula_seleccionada}.csv",
@@ -393,7 +393,7 @@ else:
             
 # --- Panel ---
 with tab6:
-    st.subheader("📊 Panel de Control y Gráficas")
+        st.subheader("📊 Panel de Control y Gráficas")
  
     # Conexión y carga de datos
     conn = sqlite3.connect(DB_PATH)
