@@ -292,6 +292,32 @@ with tab6:
     df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
     df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
     conn.close()
+    
+    # --- Informe por célula ---
+st.markdown("### 📝 Informe por Célula")
+
+# Seleccionar célula
+if not df_reports.empty:
+    celulas_disponibles = df_reports['cell_name'].unique().tolist()
+    celula_seleccionada = st.selectbox("Selecciona una célula", celulas_disponibles)
+
+    # Filtrar datos de esa célula
+    informe_celula = df_reports[df_reports['cell_name'] == celula_seleccionada]
+
+    # Mostrar tabla
+    st.dataframe(informe_celula, use_container_width=True)
+
+    # Botón para descargar
+    csv = informe_celula.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Descargar informe en CSV",
+        data=csv,
+        file_name=f"informe_{celula_seleccionada}.csv",
+        mime="text/csv"
+    )
+else:
+    st.info("No hay reportes registrados aún para generar informes.")
+
 
     # KPIs
     st.markdown("### 📈 Indicadores Clave del Sistema")
