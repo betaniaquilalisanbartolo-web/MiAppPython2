@@ -141,41 +141,6 @@ else:
         "⚙️ Administración"
     ])
 
-    # Pestaña de Registro
-    with tab_register:
-        st.subheader("Registrar nueva cuenta")
-        new_user = st.text_input("Nuevo usuario")
-        new_pass = st.text_input("Nueva contraseña", type="password")
-        if st.button("Registrar"):
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            try:
-                c.execute("INSERT INTO accounts (username, password) VALUES (?,?)", (new_user, new_pass))
-                conn.commit()
-                st.success(f"Cuenta '{new_user}' creada correctamente")
-            except sqlite3.IntegrityError:
-                st.error("Ese usuario ya existe")
-            conn.close()
-
-else:
-    st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
-    if st.button("Cerrar sesión"):
-        st.session_state["logged_in"] = False
-        st.session_state["username"] = ""
-
-    # Aquí van las pestañas principales de Miembros, Convertidos, Reportes, Descarriados, Panel y Administración
-
-
-    # --- Pestañas principales ---
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "👤 Miembros",
-        "🙌 Convertidos",
-        "📌 Reportes",
-        "🚨 Descarriados",
-        "📊 Panel",
-        "⚙️ Administración"
-    ])
-
     # --- Miembros ---
     with tab1:
         st.subheader("Registro de Miembros")
