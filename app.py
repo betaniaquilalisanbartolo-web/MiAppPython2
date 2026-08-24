@@ -166,11 +166,11 @@ else:
 
    # --- Convertidos ---
     with tab2:
-    st.subheader("Registro de Convertidos")
-    conn = sqlite3.connect(DB_PATH)
-    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-    conn.close()
-    cell_options = cells['cell_name'].tolist() if not cells.empty else []
+     st.subheader("Registro de Convertidos")
+     conn = sqlite3.connect(DB_PATH)
+     cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+     conn.close()
+     cell_options = cells['cell_name'].tolist() if not cells.empty else []
     with st.form("registro_convertido"):
         full_name = st.text_input("Nombre completo")
         age = st.number_input("Edad", min_value=0, max_value=120)
