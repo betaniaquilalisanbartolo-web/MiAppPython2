@@ -250,8 +250,8 @@ else:
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
 # --- Administración ---
-    with tab5:
-     st.subheader("⚙️ Administración")
+with tab5:
+    st.subheader("⚙️ Administración")
 
     st.markdown("### 🌱 Registrar nueva célula y líder")
     cell_name = st.text_input("Nombre de la célula")
@@ -280,8 +280,8 @@ else:
         st.success("Todos los datos fueron eliminados. Ahora las tablas están vacías.")
 
 # --- Panel ---
-    with tab6:
-     st.subheader("📊 Panel de Control y Gráficas")
+with tab6:
+    st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
     conn = sqlite3.connect(DB_PATH)
@@ -291,70 +291,62 @@ else:
     df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
     conn.close()
 
-    # --- TARJETAS MÉTRICAS (KPIs) ---
+    # KPIs
     st.markdown("### 📈 Indicadores Clave del Sistema")
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-
     with kpi1:
         total_ofrenda = df_reports['offering'].sum() if not df_reports.empty else 0.0
         st.metric("Total Ofrendas", f"${total_ofrenda:,.2f}")
-
     with kpi2:
         total_nuevos = len(df_conv) if not df_conv.empty else 0
         st.metric("Nuevos Convertidos", f"{total_nuevos} personas")
-
     with kpi3:
         miembros_activos = len(df_members[df_members['status'] == 'activo']) if not df_members.empty else 0
         st.metric("Miembros Activos", f"{miembros_activos} personas")
-
     with kpi4:
         total_asistencia = df_reports['attendance_level'].sum() if not df_reports.empty else 0
         st.metric("Impacto Total Asistencia", f"{total_asistencia} asistencias")
 
     st.markdown("---")
 
-    # --- Gráficas de convertidos por mes ---
+    # Convertidos por mes
     if not df_conv.empty:
         df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'])
         conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
-        st.line_chart(conv_mes, use_container_width=True)
+        st.line_chart(conv_mes)
 
-    # --- Gráficas de reportes ---
+    # Reportes
     if not df_reports.empty:
         df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'])
         amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
-        st.bar_chart(amigos_mes, use_container_width=True)
+        st.bar_chart(amigos_mes)
 
         crecimiento = df_reports.groupby('cell_name')['attendance_level'].sum()
-        st.bar_chart(crecimiento, use_container_width=True)
+        st.bar_chart(crecimiento)
 
-    # --- Gráfica de crecimiento de miembros y deserciones ---
+    # Crecimiento y deserciones
     if not df_members.empty or not df_descarriados.empty:
         st.markdown("### 👥 Crecimiento y Deserciones")
         df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
         df_descarriados['date_reported'] = pd.to_datetime(df_descarriados['date_reported'], errors='coerce')
-
         miembros_mes = df_members.groupby(df_members['ingreso_date'].dt.to_period("M")).size()
         deserciones_mes = df_descarriados.groupby(df_descarriados['date_reported'].dt.to_period("M")).size()
-
         grafico_crecimiento = pd.DataFrame({
             "Miembros Activos": miembros_mes,
             "Deserciones": deserciones_mes
         }).fillna(0)
+        st.line_chart(grafico_crecimiento)
 
-        st.line_chart(grafico_crecimiento, use_container_width=True)
-
-    # --- Gráfica de amigos alcanzados por mes ---
+    # Amigos alcanzados
     if not df_reports.empty:
         st.markdown("### 🤝 Amigos Alcanzados por Mes")
         amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
-        st.area_chart(amigos_mes, use_container_width=True)
+        st.area_chart(amigos_mes)
 
-    # --- Gráficos de asistencia y ofrendas ---
+    # Asistencia y ofrendas
     if not df_reports.empty:
         st.markdown("### 📊 Gráficos de Células y Finanzas")
         grafico1, grafico2 = st.columns(2)
-
         with grafico1:
             st.write("🏃‍♂️ *Asistencia Acumulada por Categoría*")
             data_asistencia = {
@@ -365,9 +357,8 @@ else:
                     df_reports['visits'].sum()
                 ]
             }
-            st.bar_chart(pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad', use_container_width=True)
-
+            st.bar_chart(pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
         with grafico2:
             st.write("💰 *Ofrendas por Célula*")
             ofrendas_por_celula = df_reports.groupby('cell_name')['offering'].sum()
-            st.bar_chart(ofrendas_por_celula, use_container_width=True)
+            st.bar_chart(ofrendas_por_celula)
