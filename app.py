@@ -423,7 +423,7 @@ if not df_members.empty or not df_descarriados.empty:
 
         # Mostrar gráfica
         st.line_chart(grafico_comparacion, use_container_width=True)
-    else:
+else:
         st.info("No hay datos suficientes para mostrar crecimiento y deserciones.")
 
 
