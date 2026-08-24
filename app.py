@@ -291,3 +291,51 @@ else:
                 st.error("Esa célula ya existe")
             conn.close()
 
+elif menu == "📊 Panel de Control y Reportes":
+    st.subheader("📊 Panel de Análisis Automático de la Iglesia")
+    
+    conn = sqlite3.connect(DB_PATH)
+    df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+    df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
+    df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+    conn.close()
+
+    # --- 1. TARJETAS MÉTRICAS AUTOMÁTICAS (KPIs) ---
+    st.markdown("### 📈 Indicadores Clave del Sistema")
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    
+    with kpi1:
+        total_ofrenda = df_cell['offering'].sum() if not df_cell.empty else 0.0
+        st.metric("Total Ofrendas", f"${total_ofrenda:,.2f}")
+    with kpi2:
+        total_nuevos = len(df_converts)
+        st.metric("Nuevos Convertidos", f"{total_nuevos} personas")
+    with kpi3:
+        miembros_activos = len(df_members[df_members['status'] == 'activo']) if not df_members.empty else 0
+        st.metric("Miembros Activos", f"{miembros_activos} personas")
+    with kpi4:
+        total_asistencia = (df_cell['adults'].sum() + df_cell['youth'].sum() + df_cell['children'].sum()) if not df_cell.empty else 0
+        st.metric("Impacto Total Asistencia", f"{total_asistencia} asistencias")
+
+    st.markdown("---")
+
+    # --- 2. ANÁLISIS GRÁFICO DE CÉLULAS Y OFRENDAS ---
+    st.markdown("### 📊 Gráficos de Células y Finanzas")
+    grafico1, grafico2 = st.columns(2)
+
+    with grafico1:
+        st.write("🏃‍♂️ *Asistencia Acumulada por Edad/Rol*")
+        if not df_cell.empty:
+            data_asistencia = {
+                'Categoría': ['Adultos', 'Jóvenes', 'Niños', 'Amigos', 'Visitas'],
+                'Cantidad': [
+                    df_cell['adults'].sum(), df_cell['youth'].sum(), df_cell['children'].sum(),
+                    df_cell['friends'].sum(), df_cell['visits'].sum()
+                ]
+            }
+            st.bar_chart(data=pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
+        else:
+            st.info("Agrega reportes de células para visualizar métricas de asistencia.")
+
+    with grafico2
+
