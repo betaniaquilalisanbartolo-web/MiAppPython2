@@ -118,22 +118,21 @@ if not st.session_state["logged_in"]:
                 st.error("Ese usuario ya existe")
             conn.close()
 
-else:
+    else:
     st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
     if st.button("Cerrar sesión"):
         st.session_state["logged_in"] = False
         st.session_state["username"] = ""
 
-  # --- Pestañas principales ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "👤 Miembros",
-    "🙌 Convertidos",
-    "📌 Reportes",
-    "🚨 Descarriados",
-    "⚙️ Administración",
-    "📊 Panel"
-])
-
+    # --- Pestañas principales ---
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "👤 Miembros",
+        "🙌 Convertidos",
+        "📌 Reportes",
+        "🚨 Descarriados",
+        "⚙️ Administración",
+        "📊 Panel"
+    ])
 
     # --- Miembros ---
     with tab1:
