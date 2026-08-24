@@ -249,7 +249,8 @@ else:
                     (full_name, age, contact, cell, reason, date_reported.strftime("%Y-%m-%d")))
                 conn.commit()
                 conn.close()
-                st.success(f"Descarriado {full_name} registrado en la célula {cell}"
+               st.success(f"Descarriado {full_name} registrado en la célula {cell}")
+
 
 # --- Descarriados ---
 with tab4:
