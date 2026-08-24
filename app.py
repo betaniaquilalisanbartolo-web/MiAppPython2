@@ -395,9 +395,6 @@ with tab6:
     df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
     df_descarriados['date_reported'] = pd.to_datetime(df_descarriados['date_reported'], errors='coerce')
 
-    # Agrupar por mes
-    miembros_mes = df_members.groupby(df_members['ingreso_date'].dt.to_period("M")).size()
-    deserciones_mes = df_descarriados.groupby(df_descarriados['date_reported'].dt.to_period("M")).size()
 
 
 
