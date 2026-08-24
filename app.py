@@ -399,11 +399,6 @@ with tab6:
     miembros_mes = df_members.groupby(df_members['ingreso_date'].dt.to_period("M")).size()
     deserciones_mes = df_descarriados.groupby(df_descarriados['date_reported'].dt.to_period("M")).size()
 
-    # Crear DataFrame comparativo
-    grafico_comparacion = pd.DataFrame({
-        "Miembros Activos": miembros_mes,
-        "Deserciones": deserciones_mes
-    }).fillna(0)
 
 
 
