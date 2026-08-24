@@ -288,6 +288,7 @@ with tab6:
     df_conv = pd.read_sql_query("SELECT * FROM new_converts", conn)
     df_reports = pd.read_sql_query("SELECT * FROM cell_reports", conn)
     df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
+    df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
     conn.close()
 
     # --- TARJETAS MÉTRICAS (KPIs) ---
@@ -312,20 +313,45 @@ with tab6:
 
     st.markdown("---")
 
-    # --- Gráficas ---
+    # --- Gráficas de convertidos por mes ---
     if not df_conv.empty:
         df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'])
         conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
-        st.line_chart(conv_mes)
+        st.line_chart(conv_mes, use_container_width=True)
 
+    # --- Gráficas de reportes ---
     if not df_reports.empty:
         df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'])
         amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
-        st.bar_chart(amigos_mes)
+        st.bar_chart(amigos_mes, use_container_width=True)
 
         crecimiento = df_reports.groupby('cell_name')['attendance_level'].sum()
-        st.bar_chart(crecimiento)
+        st.bar_chart(crecimiento, use_container_width=True)
 
+    # --- Gráfica de crecimiento de miembros y deserciones ---
+    if not df_members.empty or not df_descarriados.empty:
+        st.markdown("### 👥 Crecimiento y Deserciones")
+        df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
+        df_descarriados['date_reported'] = pd.to_datetime(df_descarriados['date_reported'], errors='coerce')
+
+        miembros_mes = df_members.groupby(df_members['ingreso_date'].dt.to_period("M")).size()
+        deserciones_mes = df_descarriados.groupby(df_descarriados['date_reported'].dt.to_period("M")).size()
+
+        grafico_crecimiento = pd.DataFrame({
+            "Miembros Activos": miembros_mes,
+            "Deserciones": deserciones_mes
+        }).fillna(0)
+
+        st.line_chart(grafico_crecimiento, use_container_width=True)
+
+    # --- Gráfica de amigos alcanzados por mes ---
+    if not df_reports.empty:
+        st.markdown("### 🤝 Amigos Alcanzados por Mes")
+        amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
+        st.area_chart(amigos_mes, use_container_width=True)
+
+    # --- Gráficos de asistencia y ofrendas ---
+    if not df_reports.empty:
         st.markdown("### 📊 Gráficos de Células y Finanzas")
         grafico1, grafico2 = st.columns(2)
 
@@ -339,10 +365,9 @@ with tab6:
                     df_reports['visits'].sum()
                 ]
             }
-            st.bar_chart(pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
+            st.bar_chart(pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad', use_container_width=True)
 
         with grafico2:
             st.write("💰 *Ofrendas por Célula*")
             ofrendas_por_celula = df_reports.groupby('cell_name')['offering'].sum()
-            st.bar_chart(ofrendas_por_celula)
-            
+            st.bar_chart(ofrendas_por_celula, use_container_width=True)
