@@ -327,8 +327,8 @@ else:
         else:
             st.info("Agrega reportes de células para visualizar métricas de ofrendas.")
 
- # --- Administración ---
- with tab6:
+  # --- Administración ---
+  with tab6:
     st.subheader("⚙️ Administración")
 
     st.markdown("### 🌱 Registrar nueva célula y líder")
