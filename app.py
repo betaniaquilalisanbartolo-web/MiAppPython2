@@ -199,7 +199,7 @@ else:
                 st.success(f"Convertido {full_name} registrado en la célula {assigned_cell}")
 
 # --- Reportes ---
-    with tab3:
+   with tab3:
     st.subheader("Registro de Reportes de Células")
     conn = sqlite3.connect(DB_PATH)
     cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
