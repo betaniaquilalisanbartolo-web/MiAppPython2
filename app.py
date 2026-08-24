@@ -135,7 +135,7 @@ else:
     ])
     
 # --- Miembros ---
- with tab1:
+    with tab1:
         st.subheader("Registro de Miembros")
         conn = sqlite3.connect(DB_PATH)
         cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
@@ -165,7 +165,7 @@ else:
                 st.success(f"Miembro {full_name} registrado en la célula {cell}")
 
 # --- Convertidos ---
-with tab2:
+        with tab2:
         st.subheader("Registro de Convertidos")
         conn = sqlite3.connect(DB_PATH)
         cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
@@ -192,7 +192,7 @@ with tab2:
                 st.success(f"Convertido {full_name} registrado en la célula {assigned_cell}")
 
 # --- Reportes ---
-with tab3:
+        with tab3:
         st.subheader("Registro de Reportes de Células")
         conn = sqlite3.connect(DB_PATH)
         cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
@@ -226,7 +226,7 @@ with tab3:
                 st.success(f"Reporte registrado para la célula {cell_name}")
 
 # --- Descarriados ---
-with tab4:
+        with tab4:
          st.subheader("Registro de Descarriados")
          conn = sqlite3.connect(DB_PATH)
          cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
@@ -251,7 +251,7 @@ with tab4:
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
 # --- Administración ---
-with tab5:
+    with tab5:
     st.subheader("⚙️ Administración")
 
     st.markdown("### 🌱 Registrar nueva célula y líder")
@@ -282,7 +282,7 @@ with tab5:
         st.success("Todos los datos fueron eliminados. Ahora las tablas están vacías.")
 
 # --- Panel ---
-with tab6:
+    with tab6:
     st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
@@ -382,6 +382,7 @@ with tab6:
                 ]
             }
             st.bar_chart(pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
+            
         with grafico2:
             st.write("💰 *Ofrendas por Célula*")
             ofrendas_por_celula = df_reports.groupby('cell_name')['offering'].sum()
