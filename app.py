@@ -279,8 +279,8 @@ else:
         conn.close()
         st.success("Todos los datos fueron eliminados. Ahora las tablas están vacías.")
 
-   # --- Panel ---
-  with tab6:
+  # --- Panel ---
+ with tab6:
      st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
