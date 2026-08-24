@@ -165,7 +165,7 @@ else:
                 st.success(f"Miembro {full_name} registrado en la célula {cell}")
 
    # --- Convertidos ---
-   with tab2:
+    with tab2:
     st.subheader("Registro de Convertidos")
     conn = sqlite3.connect(DB_PATH)
     cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
