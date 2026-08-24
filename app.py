@@ -209,4 +209,5 @@ elif menu == "📊 Panel de Control y Reportes":
 
     # Gráfica de crecimiento
     st.markdown("### 📈 Crecimiento de las Células")
-    if not df_members.empty or not df_converts.empty or not
+    if not df_members.empty or not df_converts.empty or not df_cell.empty:
+        miembros_por_c
