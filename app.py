@@ -118,27 +118,53 @@ else:
 
     with tab1:
         st.subheader("Registro de Miembros")
-        # formulario de miembros
+        # aquí va el formulario de miembros
 
     with tab2:
         st.subheader("Registro de Convertidos")
-        # formulario de convertidos
+        # aquí va el formulario de convertidos
 
     with tab3:
         st.subheader("Reportes de Células")
-        # formulario de reportes
+        # aquí va el formulario de reportes
 
     with tab4:
         st.subheader("Registro de Descarriados")
-        # formulario de descarriados
+        # aquí va el formulario de descarriados
 
     with tab5:
         st.subheader("Panel de Control y Gráficas")
-        # KPIs y gráficas
+        # aquí va el bloque del panel con KPIs y gráficas
 
     with tab6:
-        st.subheader("Administración")
-        # cuentas y células
+        st.subheader("⚙️ Administración")
+        st.markdown("### 🆕 Registrar nueva cuenta")
+        new_user = st.text_input("Nuevo usuario")
+        new_pass = st.text_input("Nueva contraseña", type="password")
+        if st.button("Registrar cuenta"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            try:
+                c.execute("INSERT INTO accounts (username, password) VALUES (?,?)", (new_user, new_pass))
+                conn.commit()
+                st.success(f"Cuenta '{new_user}' creada correctamente")
+            except sqlite3.IntegrityError:
+                st.error("Ese usuario ya existe")
+            conn.close()
+
+        st.markdown("### 🌱 Registrar nueva célula y líder")
+        cell_name = st.text_input("Nombre de la célula")
+        leader = st.text_input("Nombre del líder")
+        if st.button("Registrar célula"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            try:
+                c.execute("INSERT INTO cells (cell_name, leader) VALUES (?,?)", (cell_name, leader))
+                conn.commit()
+                st.success(f"Célula '{cell_name}' registrada con líder {leader}")
+            except sqlite3.IntegrityError:
+                st.error("Esa célula ya existe")
+            conn.close()
 
 
     # Registrar nueva célula
