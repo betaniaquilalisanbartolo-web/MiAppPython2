@@ -134,7 +134,7 @@ else:
         "📊 Panel"
     ])
 # --- Miembros ---
-with tab1:
+ with tab1:
         st.subheader("Registro de Miembros")
         conn = sqlite3.connect(DB_PATH)
         cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
