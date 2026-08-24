@@ -268,8 +268,8 @@ else:
         conn.close()
 
 # --- Panel ---
-with tab6:
-    st.subheader("📊 Panel de Control y Gráficas")
+    with tab6:
+     st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
     conn = sqlite3.connect(DB_PATH)
