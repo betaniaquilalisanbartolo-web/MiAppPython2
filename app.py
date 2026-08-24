@@ -235,3 +235,56 @@ with tab4:
             conn.close()
             st.success(f"Descarriado {full_name} registrado en la célula {cell}")
 
+ # --- Panel ---
+    with tab5:
+        st.subheader("Panel de Control y Gráficas")
+        conn = sqlite3.connect(DB_PATH)
+        df_conv = pd.read_sql_query("SELECT * FROM new_converts", conn)
+        df_reports = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+        conn.close()
+
+        if not df_conv.empty:
+            df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'])
+            conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
+            st.line_chart(conv_mes)
+
+        if not df_reports.empty:
+            df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'])
+            amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
+            st.bar_chart(amigos_mes)
+
+            crecimiento = df_reports.groupby('cell_name')['attendance_level'].sum()
+            st.bar_chart(crecimiento)
+
+    # --- Administración ---
+    with tab6:
+        st.subheader("⚙️ Administración")
+
+        st.markdown("### 🆕 Registrar nueva cuenta")
+        new_user = st.text_input("Nuevo usuario")
+        new_pass = st.text_input("Nueva contraseña", type="password")
+        if st.button("Registrar cuenta"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            try:
+                c.execute("INSERT INTO accounts (username, password) VALUES (?,?)", (new_user, new_pass))
+                conn.commit()
+                st.success(f"Cuenta '{new_user}' creada correctamente")
+            except sqlite3.IntegrityError:
+                st.error("Ese usuario ya existe")
+            conn.close()
+
+        st.markdown("### 🌱 Registrar nueva célula y líder")
+        cell_name = st.text_input("Nombre de la célula")
+        leader = st.text_input("Nombre del líder")
+        if st.button("Registrar célula"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            try:
+                c.execute("INSERT INTO cells (cell_name, leader) VALUES (?,?)", (cell_name, leader))
+                conn.commit()
+                st.success(f"Célula '{cell_name}' registrada con líder {leader}")
+            except sqlite3.IntegrityError:
+                st.error("Esa célula ya existe")
+            conn.close()
+
