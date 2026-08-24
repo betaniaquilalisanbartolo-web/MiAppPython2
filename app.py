@@ -87,16 +87,24 @@ def init_db():
 
 init_db()
 
-# --- Menú principal ---
-menu = st.sidebar.selectbox("Menú", [
-    "🏠 Inicio (Login)",
-    "👤 Registro de Miembros",
-    "🙌 Registro de Convertidos",
-    "📌 Reportes de Células",
-    "🚨 Registro de Descarriados",
-    "📊 Panel de Control y Reportes",
-    "⚙️ Administración"
-])
+# --- Estado de sesión ---
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+    st.session_state["username"] = ""
+
+# --- Menú dinámico ---
+if not st.session_state["logged_in"]:
+    menu = st.sidebar.selectbox("Menú", ["🏠 Inicio (Login)"])
+else:
+    menu = st.sidebar.selectbox("Menú", [
+        "🏠 Inicio (Login)",
+        "👤 Registro de Miembros",
+        "🙌 Registro de Convertidos",
+        "📌 Reportes de Células",
+        "🚨 Registro de Descarriados",
+        "📊 Panel de Control y Reportes",
+        "⚙️ Administración"
+    ])
 
 # --- Inicio/Login ---
 if menu == "🏠 Inicio (Login)":
@@ -110,9 +118,17 @@ if menu == "🏠 Inicio (Login)":
         user = c.fetchone()
         conn.close()
         if user:
+            st.session_state["logged_in"] = True
+            st.session_state["username"] = username
             st.success(f"Bienvenido {username}")
         else:
             st.error("Usuario o contraseña incorrectos")
+
+    if st.session_state["logged_in"]:
+        st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
+        if st.button("Cerrar sesión"):
+            st.session_state["logged_in"] = False
+            st.session_state["username"] = ""
 
 # --- Administración ---
 elif menu == "⚙️ Administración":
@@ -151,78 +167,71 @@ elif menu == "⚙️ Administración":
 # --- Registro de Miembros ---
 elif menu == "👤 Registro de Miembros":
     st.subheader("Registro de Miembros")
-    # (pega aquí el bloque de formulario de miembros que ya te pasé)
+    conn = sqlite3.connect(DB_PATH)
+    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+    conn.close()
+    cell_options = cells['cell_name'].tolist() if not cells.empty else []
+
+    with st.form("registro_miembro"):
+        full_name = st.text_input("Nombre completo")
+        age = st.number_input("Edad", min_value=0, max_value=120)
+        contact = st.text_input("Contacto")
+        cell = st.selectbox("Célula", cell_options)
+        sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
+        discipleship_type = st.selectbox("¿En discipulado?", ["Sí", "No"])
+        other_church = st.selectbox("¿Viene de otra iglesia?", ["Sí", "No"])
+        ingreso_date = st.date_input("Fecha de ingreso")
+        ministry = st.text_input("Ministerio")
+        status = st.selectbox("Estado", ["activo", "inactivo"])
+        submit = st.form_submit_button("Registrar Miembro")
+
+        if submit and full_name:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("""INSERT INTO members_stats 
+                (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status)
+                VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date.strftime("%Y-%m-%d"), ministry, status))
+            conn.commit()
+            conn.close()
+            st.success(f"Miembro {full_name} registrado en la célula {cell}")
 
 # --- Registro de Convertidos ---
 elif menu == "🙌 Registro de Convertidos":
     st.subheader("Registro de Nuevos Convertidos")
-    # (pega aquí el bloque de formulario de convertidos)
+    conn = sqlite3.connect(DB_PATH)
+    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+    conn.close()
+    cell_options = cells['cell_name'].tolist() if not cells.empty else []
+
+    with st.form("registro_convertido"):
+        full_name = st.text_input("Nombre completo")
+        age = st.number_input("Edad", min_value=0, max_value=120)
+        contact = st.text_input("Contacto")
+        address = st.text_input("Dirección")
+        assigned_cell = st.selectbox("Célula asignada", cell_options)
+        decision_type = st.selectbox("Decisión", ["Aceptó a Cristo", "Reconciliación"])
+        conversion_date = st.date_input("Fecha de conversión")
+        submit = st.form_submit_button("Registrar Convertido")
+
+        if submit and full_name:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("""INSERT INTO new_converts 
+                (full_name, age, contact, address, assigned_cell, decision_type, conversion_date)
+                VALUES (?,?,?,?,?,?,?)""",
+                (full_name, age, contact, address, assigned_cell, decision_type, conversion_date.strftime("%Y-%m-%d")))
+            conn.commit()
+            conn.close()
+            st.success(f"Convertido {full_name} registrado en la célula {assigned_cell}")
 
 # --- Reportes de Células ---
 elif menu == "📌 Reportes de Células":
     st.subheader("Registro de Reportes de Células")
-    # (pega aquí el bloque de formulario de reportes)
-
-# --- Registro de Descarriados ---
-elif menu == "🚨 Registro de Descarriados":
-    st.subheader("Registro de Descarriados")
-    # (pega aquí el bloque de formulario de descarriados)
-
-# --- Panel de Control ---
-elif menu == "📊 Panel de Control y Reportes":
-    st.subheader("📊 Panel de Análisis Automático de la Iglesia")
-
     conn = sqlite3.connect(DB_PATH)
-    df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
-    df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
-    df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
-    df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
+    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
     conn.close()
+    cell_options = cells['cell_name'].tolist() if not cells.empty else []
 
-    # KPIs
-    total_ofrenda = df_cell['offering'].sum() if not df_cell.empty else 0.0
-    total_convertidos = len(df_converts) if not df_converts.empty else 0
-    total_amigos = df_cell['friends'].sum() if not df_cell.empty else 0
-
-    st.metric("💰 Ofrenda Total", f"${total_ofrenda:,.2f}")
-    st.metric("🙌 Convertidos Totales", f"{total_convertidos}")
-    st.metric("🤝 Amigos Evangelizados", f"{total_amigos}")
-
-    # Gráfica de convertidos por mes
-    if not df_converts.empty:
-        df_converts['conversion_date'] = pd.to_datetime(df_converts['conversion_date'])
-        converts_by_month = df_converts.groupby(df_converts['conversion_date'].dt.to_period("M")).size()
-        st.markdown("### 📈 Nuevos Convertidos por Mes")
-        st.bar_chart(converts_by_month)
-
-    # Gráficas de amigos evangelizados
-    if not df_cell.empty:
-        df_cell['meeting_date'] = pd.to_datetime(df_cell['meeting_date'])
-        friends_by_month = df_cell.groupby(df_cell['meeting_date'].dt.to_period("M"))['friends'].sum()
-        friends_by_week = df_cell.groupby(df_cell['meeting_date'].dt.to_period("W"))['friends'].sum()
-        st.markdown("### 🤝 Amigos Evangelizados por Mes")
-        st.line_chart(friends_by_month)
-        st.markdown("### 🤝 Amigos Evangelizados por Semana")
-        st.line_chart(friends_by_week)
-
-        # Gráfica de crecimiento por célula
-    if not df_members.empty or not df_converts.empty or not df_cell.empty:
-        miembros_por_celula = df_members.groupby("cell")["full_name"].count().reset_index()
-        miembros_por_celula.rename(columns={"full_name": "Miembros"}, inplace=True)
-
-        convertidos_por_celula = df_converts.groupby("assigned_cell")["full_name"].count().reset_index()
-        convertidos_por_celula.rename(columns={"full_name": "Convertidos"}, inplace=True)
-
-        asistencia_por_celula = df_cell.groupby("cell_name")[["adults","youth","children","friends"]].sum().reset_index()
-
-        crecimiento = pd.merge(miembros_por_celula, convertidos_por_celula,
-                               left_on="cell", right_on="assigned_cell", how="outer").fillna(0)
-        crecimiento["Célula"] = crecimiento["cell"].combine_first(crecimiento["assigned_cell"])
-        crecimiento = pd.merge(crecimiento, asistencia_por_celula, left_on="Célula", right_on="cell_name", how="outer").fillna(0)
-
-        crecimiento = crecimiento[["Célula","Miembros","Convertidos","adults","youth","children","friends"]]
-        crecimiento.rename(columns={"adults":"Adultos","youth":"Jóvenes","children":"Niños","friends":"Amigos"}, inplace=True)
-
-        st.markdown("### 🌱 Crecimiento por Célula")
-        st.dataframe(crecimiento)
-        st.bar_chart(crecimiento.set_index("Célula"))
+    with st.form("registro_reporte"):
+        cell_name = st.selectbox("Célula", cell_options)
