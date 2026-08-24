@@ -252,8 +252,8 @@ else:
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
 
 
-# --- Panel ---
-with tab5:
+    # --- Panel ---
+    with tab5:
     st.subheader("Panel de Control y Gráficas")
 
     # Conexión y carga de datos
@@ -327,8 +327,8 @@ with tab5:
         else:
             st.info("Agrega reportes de células para visualizar métricas de ofrendas.")
 
-# --- Administración ---
-with tab6:
+   # --- Administración ---
+   with tab6:
     st.subheader("⚙️ Administración")
 
     st.markdown("### 🌱 Registrar nueva célula y líder")
