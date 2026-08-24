@@ -3,6 +3,11 @@ import sqlite3
 import pandas as pd
 import os
 
+# --- Estado de sesión ---
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+    st.session_state["username"] = ""
+
 # --- Base de datos ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "database.db")
