@@ -383,6 +383,7 @@ with tab6:
 
     # Mostrar gráfica de líneas
     st.line_chart(grafico_comparacion, use_container_width=True)
+
 else:
     st.info("No hay datos suficientes para mostrar crecimiento y deserciones.")
 
