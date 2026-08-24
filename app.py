@@ -250,8 +250,9 @@ else:
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
 # --- Administración ---
-    with tab5:
-     st.subheader("⚙️ Administración")
+with tab5:
+    st.subheader("⚙️ Administración")
+
     st.markdown("### 🌱 Registrar nueva célula y líder")
     cell_name = st.text_input("Nombre de la célula")
     leader = st.text_input("Nombre del líder")
@@ -266,9 +267,21 @@ else:
             st.error("Esa célula ya existe")
         conn.close()
 
+    # Botón para reiniciar datos
+    if st.button("🗑️ Reiniciar datos"):
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("DELETE FROM members_stats")
+        c.execute("DELETE FROM new_converts")
+        c.execute("DELETE FROM cell_reports")
+        c.execute("DELETE FROM descarriados")
+        conn.commit()
+        conn.close()
+        st.success("Todos los datos fueron eliminados. Ahora las tablas están vacías.")
+
 # --- Panel ---
-    with tab6:
-     st.subheader("📊 Panel de Control y Gráficas")
+with tab6:
+    st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
     conn = sqlite3.connect(DB_PATH)
@@ -276,21 +289,6 @@ else:
     df_reports = pd.read_sql_query("SELECT * FROM cell_reports", conn)
     df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
     conn.close()
-
-    # Gráficas de convertidos por mes
-    if not df_conv.empty:
-        df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'])
-        conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
-        st.line_chart(conv_mes)
-
-    # Gráficas de reportes
-    if not df_reports.empty:
-        df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'])
-        amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
-        st.bar_chart(amigos_mes)
-
-        crecimiento = df_reports.groupby('cell_name')['attendance_level'].sum()
-        st.bar_chart(crecimiento)
 
     # --- TARJETAS MÉTRICAS (KPIs) ---
     st.markdown("### 📈 Indicadores Clave del Sistema")
@@ -314,13 +312,25 @@ else:
 
     st.markdown("---")
 
-    # --- ANÁLISIS GRÁFICO DE CÉLULAS Y OFRENDAS ---
-    st.markdown("### 📊 Gráficos de Células y Finanzas")
-    grafico1, grafico2 = st.columns(2)
+    # --- Gráficas ---
+    if not df_conv.empty:
+        df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'])
+        conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
+        st.line_chart(conv_mes)
 
-    with grafico1:
-        st.write("🏃‍♂️ *Asistencia Acumulada por Categoría*")
-        if not df_reports.empty:
+    if not df_reports.empty:
+        df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'])
+        amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
+        st.bar_chart(amigos_mes)
+
+        crecimiento = df_reports.groupby('cell_name')['attendance_level'].sum()
+        st.bar_chart(crecimiento)
+
+        st.markdown("### 📊 Gráficos de Células y Finanzas")
+        grafico1, grafico2 = st.columns(2)
+
+        with grafico1:
+            st.write("🏃‍♂️ *Asistencia Acumulada por Categoría*")
             data_asistencia = {
                 'Categoría': ['Adultos', 'Jóvenes', 'Niños', 'Amigos', 'Visitas'],
                 'Cantidad': [
@@ -330,16 +340,8 @@ else:
                 ]
             }
             st.bar_chart(pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
-        else:
-            st.info("Agrega reportes de células para visualizar métricas de asistencia.")
 
-    with grafico2:
-        st.write("💰 *Ofrendas por Célula*")
-        if not df_reports.empty:
+        with grafico2:
+            st.write("💰 *Ofrendas por Célula*")
             ofrendas_por_celula = df_reports.groupby('cell_name')['offering'].sum()
             st.bar_chart(ofrendas_por_celula)
-        else:
-            st.info("Agrega reportes de células para visualizar métricas de ofrendas.")
-
-
-  
