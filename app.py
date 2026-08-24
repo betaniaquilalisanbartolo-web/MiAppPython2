@@ -262,7 +262,7 @@ else:
         try:
          c.execute("INSERT INTO cells (cell_name, leader) VALUES (?,?)", (cell_name, leader))
          conn.commit()
-            st.success(f"Célula '{cell_name}' registrada con líder {leader}")
+        st.success(f"Célula '{cell_name}' registrada con líder {leader}")
         except sqlite3.IntegrityError:
             st.error("Esa célula ya existe")
         conn.close()
