@@ -82,39 +82,34 @@ if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
     st.session_state["username"] = ""
 
-# --- Inicio/Login ---
-if not st.session_state["logged_in"]:
-    st.subheader("🔑 Iniciar Sesión")
-    username = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
-    if st.button("Iniciar sesión"):
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT * FROM accounts WHERE username=? AND password=?", (username, password))
-        user = c.fetchone()
-        conn.close()
-        if user:
-            st.session_state["logged_in"] = True
-            st.session_state["username"] = username
-            st.success(f"Bienvenido {username}")
-        else:
-            st.error("Usuario o contraseña incorrectos")
+# --- Descarriados ---
+with tab4:
+    st.subheader("Registro de Descarriados")
+    conn = sqlite3.connect(DB_PATH)
+    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+    conn.close()
+    cell_options = cells['cell_name'].tolist() if not cells.empty else []
 
-else:
-    st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
-    if st.button("Cerrar sesión"):
-        st.session_state["logged_in"] = False
-        st.session_state["username"] = ""
+    with st.form("registro_descarriado"):
+        full_name = st.text_input("Nombre completo")
+        age = st.number_input("Edad", min_value=0, max_value=120)
+        contact = st.text_input("Contacto")
+        cell = st.selectbox("Célula", cell_options)
+        reason = st.text_area("Razón de descarriado")
+        date_reported = st.date_input("Fecha de reporte")
+        submit = st.form_submit_button("Registrar Descarriado")
 
-    # --- Pestañas principales ---
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "👤 Miembros",
-        "🙌 Convertidos",
-        "📌 Reportes",
-        "🚨 Descarriados",
-        "📊 Panel",
-        "⚙️ Administración"
-    ])
+        if submit and full_name:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("""INSERT INTO descarriados 
+                (full_name, age, contact, cell, reason, date_reported)
+                VALUES (?,?,?,?,?,?)""",
+                (full_name, age, contact, cell, reason, date_reported.strftime("%Y-%m-%d")))
+            conn.commit()
+            conn.close()
+            st.success(f"Descarriado {full_name} registrado en la célula {cell}")
+
 
     # --- Miembros ---
     with tab1:
