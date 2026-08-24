@@ -260,20 +260,6 @@ with tab4:
     with tab6:
         st.subheader("⚙️ Administración")
 
-        st.markdown("### 🆕 Registrar nueva cuenta")
-        new_user = st.text_input("Nuevo usuario")
-        new_pass = st.text_input("Nueva contraseña", type="password")
-        if st.button("Registrar cuenta"):
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            try:
-                c.execute("INSERT INTO accounts (username, password) VALUES (?,?)", (new_user, new_pass))
-                conn.commit()
-                st.success(f"Cuenta '{new_user}' creada correctamente")
-            except sqlite3.IntegrityError:
-                st.error("Ese usuario ya existe")
-            conn.close()
-
         st.markdown("### 🌱 Registrar nueva célula y líder")
         cell_name = st.text_input("Nombre de la célula")
         leader = st.text_input("Nombre del líder")
