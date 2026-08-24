@@ -352,7 +352,7 @@ with tab6:
 
     with grafico1:
         st.write("🏃‍♂️ *Asistencia Acumulada por Edad/Rol*")
-        if not df_cell.empty:
+         if not df_cell.empty:
             data_asistencia = {
                 'Categoría': ['Adultos', 'Jóvenes', 'Niños', 'Amigos', 'Visitas'],
                 'Cantidad': [
