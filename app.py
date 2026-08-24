@@ -291,15 +291,6 @@ else:
                 st.error("Esa célula ya existe")
             conn.close()
 
-elif menu == "📊 Panel de Control y Reportes":
-    st.subheader("📊 Panel de Análisis Automático de la Iglesia")
-    
-    conn = sqlite3.connect(DB_PATH)
-    df_cell = pd.read_sql_query("SELECT * FROM cell_reports", conn)
-    df_converts = pd.read_sql_query("SELECT * FROM new_converts", conn)
-    df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
-    conn.close()
-
     # --- 1. TARJETAS MÉTRICAS AUTOMÁTICAS (KPIs) ---
     st.markdown("### 📈 Indicadores Clave del Sistema")
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
