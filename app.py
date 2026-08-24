@@ -249,10 +249,9 @@ else:
                 conn.commit()
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
-                # --- Administración ---
+# --- Administración ---
     with tab5:
      st.subheader("⚙️ Administración")
-
     st.markdown("### 🌱 Registrar nueva célula y líder")
     cell_name = st.text_input("Nombre de la célula")
     leader = st.text_input("Nombre del líder")
