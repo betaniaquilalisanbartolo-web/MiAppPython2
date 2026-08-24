@@ -11,21 +11,17 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
-    # Tabla de cuentas
+    # Tablas
     c.execute("""CREATE TABLE IF NOT EXISTS accounts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
         password TEXT
     )""")
-
-    # Tabla de células
     c.execute("""CREATE TABLE IF NOT EXISTS cells (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         cell_name TEXT UNIQUE,
         leader TEXT
     )""")
-
-    # Tabla de miembros
     c.execute("""CREATE TABLE IF NOT EXISTS members_stats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name TEXT,
@@ -39,8 +35,6 @@ def init_db():
         ministry TEXT,
         status TEXT
     )""")
-
-    # Tabla de convertidos
     c.execute("""CREATE TABLE IF NOT EXISTS new_converts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name TEXT,
@@ -51,8 +45,6 @@ def init_db():
         decision_type TEXT,
         conversion_date TEXT
     )""")
-
-    # Tabla de reportes
     c.execute("""CREATE TABLE IF NOT EXISTS cell_reports (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         cell_name TEXT,
@@ -70,8 +62,6 @@ def init_db():
         spiritual_level TEXT,
         attendance_level INTEGER
     )""")
-
-    # Tabla de descarriados
     c.execute("""CREATE TABLE IF NOT EXISTS descarriados (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         full_name TEXT,
@@ -237,4 +227,26 @@ elif menu == "📌 Reportes de Células":
         cell_name = st.selectbox("Célula", cell_options)
         meeting_date = st.date_input("Fecha de reunión")
         adults = st.number_input("Adultos", min_value=0)
-        youth = st.number_input("Jóvenes", min_value=
+        youth = st.number_input("Jóvenes", min_value=0)
+        children = st.number_input("Niños", min_value=0)
+        friends = st.number_input("Amigos", min_value=0)
+        visits = st.number_input("Visitas", min_value=0)
+        house_leader = st.text_input("Líder de casa")
+        biblical_theme = st.text_input("Tema bíblico")
+        central_text = st.text_input("Texto central")
+        offering = st.number_input("Ofrenda", min_value=0.0)
+        needs = st.text_area("Necesidades")
+        spiritual_level = st.selectbox("Nivel espiritual", ["Alto", "Medio", "Bajo"])
+        attendance_level = adults + youth + children + friends
+        submit = st.form_submit_button("Registrar Reporte")
+
+        if submit and cell_name:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("""INSERT INTO cell_reports 
+                (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
+            conn.commit()
+            conn.close()
+            st.success(f"Reporte registrado para la célula {cell_name}")
