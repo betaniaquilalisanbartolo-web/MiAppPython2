@@ -77,24 +77,30 @@ def init_db():
 
 init_db()
 
-# --- Inicio/Login ---
-st.subheader("🔑 Iniciar Sesión")
-username = st.text_input("Usuario")
-password = st.text_input("Contraseña", type="password")
-if st.button("Iniciar sesión"):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT * FROM accounts WHERE username=? AND password=?", (username, password))
-    user = c.fetchone()
-    conn.close()
-    if user:
-        st.session_state["logged_in"] = True
-        st.session_state["username"] = username
-        st.success(f"Bienvenido {username}")
-    else:
-        st.error("Usuario o contraseña incorrectos")
+# --- Estado de sesión ---
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+    st.session_state["username"] = ""
 
-if st.session_state["logged_in"]:
+# --- Inicio/Login ---
+if not st.session_state["logged_in"]:
+    st.subheader("🔑 Iniciar Sesión")
+    username = st.text_input("Usuario")
+    password = st.text_input("Contraseña", type="password")
+    if st.button("Iniciar sesión"):
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT * FROM accounts WHERE username=? AND password=?", (username, password))
+        user = c.fetchone()
+        conn.close()
+        if user:
+            st.session_state["logged_in"] = True
+            st.session_state["username"] = username
+            st.success(f"Bienvenido {username}")
+        else:
+            st.error("Usuario o contraseña incorrectos")
+
+else:
     st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
     if st.button("Cerrar sesión"):
         st.session_state["logged_in"] = False
@@ -133,6 +139,7 @@ if st.session_state["logged_in"]:
     with tab6:
         st.subheader("Administración")
         # aquí pegas el bloque de administración (cuentas y células)
+
 
 
     # Registrar nueva célula
