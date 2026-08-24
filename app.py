@@ -206,6 +206,7 @@ else:
                 conn.commit()
                 conn.close()
                 st.success(f"Reporte registrado para la célula {cell_name}")
+                
 
     # --- Descarriados ---
     with tab4:
@@ -213,4 +214,7 @@ else:
         conn = sqlite3.connect(DB_PATH)
         cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
         conn.close()
-        cell_options
+        cell_options = cells['cell_name'].tolist() if not cells.empty else []
+        with st.form("registro_descarriado"):
+            full_name = st.text_input("Nombre completo")
+            age = st.number_input("Edad", min_value=0, max
