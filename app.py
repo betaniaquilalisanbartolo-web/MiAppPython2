@@ -226,12 +226,12 @@ else:
 
     # --- Descarriados ---
     with tab4:
-        st.subheader("Registro de Descarriados")
-        conn = sqlite3.connect(DB_PATH)
-        cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-        conn.close()
-        cell_options = cells['cell_name'].tolist() if not cells.empty else []
-        with st.form("registro_descarriado"):
+         st.subheader("Registro de Descarriados")
+         conn = sqlite3.connect(DB_PATH)
+         cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+         conn.close()
+         cell_options = cells['cell_name'].tolist() if not cells.empty else []
+         with st.form("registro_descarriado"):
             full_name = st.text_input("Nombre completo")
             age = st.number_input("Edad", min_value=0, max_value=120)
             contact = st.text_input("Contacto")
@@ -250,13 +250,13 @@ else:
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
     # --- Administración ---
-with tab5:
-    st.subheader("⚙️ Administración")
+    with tab5:
+        st.subheader("⚙️ Administración")
 
-    st.markdown("### 🌱 Registrar nueva célula y líder")
-    cell_name = st.text_input("Nombre de la célula")
-    leader = st.text_input("Nombre del líder")
-    if st.button("Registrar célula"):
+        st.markdown("### 🌱 Registrar nueva célula y líder")
+        cell_name = st.text_input("Nombre de la célula")
+        leader = st.text_input("Nombre del líder")
+        if st.button("Registrar célula"):
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         try:
@@ -279,8 +279,8 @@ with tab5:
         conn.close()
         st.success("Todos los datos fueron eliminados. Ahora las tablas están vacías.")
 
-# --- Panel ---
-with tab6:
+    # --- Panel ---
+    with tab6:
     st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
