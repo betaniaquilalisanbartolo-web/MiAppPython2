@@ -346,20 +346,3 @@ with tab6:
             ofrendas_por_celula = df_reports.groupby('cell_name')['offering'].sum()
             st.bar_chart(ofrendas_por_celula)
             
-                # --- 2. ANÁLISIS GRÁFICO DE CÉLULAS Y OFRENDAS ---
-    st.markdown("### 📊 Gráficos de Células y Finanzas")
-    grafico1, grafico2 = st.columns(2)
-
-    with grafico1:
-        st.write("🏃‍♂️ *Asistencia Acumulada por Edad/Rol*")
-              if not df_cell.empty:
-            data_asistencia = {
-                'Categoría': ['Adultos', 'Jóvenes', 'Niños', 'Amigos', 'Visitas'],
-                'Cantidad': [
-                    df_cell['adults'].sum(), df_cell['youth'].sum(), df_cell['children'].sum(),
-                    df_cell['friends'].sum(), df_cell['visits'].sum()
-                ]
-            }
-            st.bar_chart(data=pd.DataFrame(data_asistencia), x='Categoría', y='Cantidad')
-        else:
-            st.info("Agrega reportes de células para visualizar métricas de asistencia.")
