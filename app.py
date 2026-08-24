@@ -385,5 +385,27 @@ with tab6:
             st.write("💰 *Ofrendas por Célula*")
             ofrendas_por_celula = df_reports.groupby('cell_name')['offering'].sum()
             st.bar_chart(ofrendas_por_celula)
+# --- Gráfica de crecimiento de miembros y deserciones ---
+if not df_members.empty or not df_descarriados.empty:
+    st.markdown("### 📊 Comparación de Crecimiento vs Deserciones")
+
+    # Convertir fechas a formato datetime
+    df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
+    df_descarriados['date_reported'] = pd.to_datetime(df_descarriados['date_reported'], errors='coerce')
+
+    # Agrupar por mes
+    miembros_mes = df_members.groupby(df_members['ingreso_date'].dt.to_period("M")).size()
+    deserciones_mes = df_descarriados.groupby(df_descarriados['date_reported'].dt.to_period("M")).size()
+
+    # Crear DataFrame comparativo
+    grafico_comparacion = pd.DataFrame({
+        "Miembros Activos": miembros_mes,
+        "Deserciones": deserciones_mes
+    }).fillna(0)
+
+    # Mostrar gráfica de líneas
+    st.line_chart(grafico_comparacion, use_container_width=True)
+else:
+    st.info("No hay datos suficientes para mostrar crecimiento y deserciones.")
 
 
