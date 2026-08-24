@@ -254,7 +254,7 @@ else:
 
     # --- Panel ---
     with tab5:
-    st.subheader("Panel de Control y Gráficas")
+     st.subheader("Panel de Control y Gráficas")
 
     # Conexión y carga de datos
     conn = sqlite3.connect(DB_PATH)
