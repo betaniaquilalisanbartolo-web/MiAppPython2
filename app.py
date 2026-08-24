@@ -328,5 +328,4 @@ else:
         else:
             st.info("Agrega reportes de células para visualizar métricas de asistencia.")
 
-    with grafico2
 
