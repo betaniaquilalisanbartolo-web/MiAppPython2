@@ -251,11 +251,6 @@ else:
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
 
-# --- Panel ---
-with tab5:
-    st.subheader("Panel de Control y Gráficas")
-    # aquí van tus KPIs y gráficas
-
 
  # --- Panel ---
     with tab5:
