@@ -207,7 +207,7 @@ else:
                 conn.close()
                 st.success(f"Reporte registrado para la célula {cell_name}")
 
-  # --- Descarriados ---
+# --- Descarriados ---
 with tab4:
     st.subheader("Registro de Descarriados")
     conn = sqlite3.connect(DB_PATH)
