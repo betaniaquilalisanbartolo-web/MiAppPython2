@@ -232,22 +232,22 @@ else:
                 conn.close()
                 st.success(f"Reporte registrado para la célula {cell_name}")
                 
-# --- Descarriados ---
-with tab4:
-    st.subheader("Registro de Descarriados")
-    conn = sqlite3.connect(DB_PATH)
-    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-    conn.close()
-    cell_options = cells['cell_name'].tolist() if not cells.empty else []
+    # --- Descarriados ---
+    with tab4:
+       st.subheader("Registro de Descarriados")
+       conn = sqlite3.connect(DB_PATH)
+       cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+       conn.close()
+       cell_options = cells['cell_name'].tolist() if not cells.empty else []
 
-    with st.form("registro_descarriado"):
-        full_name = st.text_input("Nombre completo")
-        age = st.number_input("Edad", min_value=0, max_value=120)
-        contact = st.text_input("Contacto")
-        cell = st.selectbox("Célula", cell_options)
-        reason = st.text_area("Razón de descarriado")
-        date_reported = st.date_input("Fecha de reporte")
-        submit = st.form_submit_button("Registrar Descarriado")
+        with st.form("registro_descarriado"):
+            full_name = st.text_input("Nombre completo")
+            age = st.number_input("Edad", min_value=0, max_value=120)
+            contact = st.text_input("Contacto")
+            cell = st.selectbox("Célula", cell_options)
+            reason = st.text_area("Razón de descarriado")
+            date_reported = st.date_input("Fecha de reporte")
+            submit = st.form_submit_button("Registrar Descarriado")
 
         if submit and full_name:
             conn = sqlite3.connect(DB_PATH)
