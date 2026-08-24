@@ -387,15 +387,6 @@ with tab6:
             st.bar_chart(ofrendas_por_celula)
 
 
-    # --- Gráfica de crecimiento de miembros y deserciones ---
-     if not df_members.empty or not df_descarriados.empty:
-    st.markdown("### 📊 Comparación de Crecimiento vs Deserciones")
-
-    # Convertir fechas a formato datetime
-    df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
-    df_descarriados['date_reported'] = pd.to_datetime(df_descarriados['date_reported'], errors='coerce')
-
-
 
 
 
