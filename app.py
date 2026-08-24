@@ -77,34 +77,45 @@ def init_db():
 
 init_db()
 
-# --- Estado de sesión ---
-if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = False
-    st.session_state["username"] = ""
-
 # --- Inicio/Login ---
 if not st.session_state["logged_in"]:
     st.subheader("🔑 Iniciar Sesión")
-    username = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
-    if st.button("Iniciar sesión"):
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute("SELECT * FROM accounts WHERE username=? AND password=?", (username, password))
-        user = c.fetchone()
-        conn.close()
-        if user:
-            st.session_state["logged_in"] = True
-            st.session_state["username"] = username
-            st.success(f"Bienvenido {username}")
-        else:
-            st.error("Usuario o contraseña incorrectos")
 
-else:
-    st.info(f"Ya has iniciado sesión como {st.session_state['username']}")
-    if st.button("Cerrar sesión"):
-        st.session_state["logged_in"] = False
-        st.session_state["username"] = ""
+    col1, col2 = st.columns(2)
+
+    # Columna izquierda: Login
+    with col1:
+        username = st.text_input("Usuario")
+        password = st.text_input("Contraseña", type="password")
+        if st.button("Iniciar sesión"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("SELECT * FROM accounts WHERE username=? AND password=?", (username, password))
+            user = c.fetchone()
+            conn.close()
+            if user:
+                st.session_state["logged_in"] = True
+                st.session_state["username"] = username
+                st.success(f"Bienvenido {username}")
+            else:
+                st.error("Usuario o contraseña incorrectos")
+
+    # Columna derecha: Registro de nueva cuenta
+    with col2:
+        st.subheader("🆕 Registrar nueva cuenta")
+        new_user = st.text_input("Nuevo usuario")
+        new_pass = st.text_input("Nueva contraseña", type="password")
+        if st.button("Registrar cuenta"):
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            try:
+                c.execute("INSERT INTO accounts (username, password) VALUES (?,?)", (new_user, new_pass))
+                conn.commit()
+                st.success(f"Cuenta '{new_user}' creada correctamente")
+            except sqlite3.IntegrityError:
+                st.error("Ese usuario ya existe")
+            conn.close()
+
 
     # --- Pestañas principales ---
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
