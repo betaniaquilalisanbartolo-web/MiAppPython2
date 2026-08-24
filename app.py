@@ -82,7 +82,6 @@ def init_db():
 
 init_db()
 
-# --- Inicio/Login ---
 if not st.session_state["logged_in"]:
     st.subheader("🔑 Iniciar Sesión")
 
