@@ -139,67 +139,71 @@ else:
         "🚨 Descarriados",
         "📊 Panel",
         "⚙️ Administración"
-    ])
+  ])
+    
+# --- Miembros ---
+with tab1:
+    st.subheader("Registro de Miembros")
+    conn = sqlite3.connect(DB_PATH)
+    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+    conn.close()
+    cell_options = cells['cell_name'].tolist() if not cells.empty else []
 
-    # --- Miembros ---
-    with tab1:
-        st.subheader("Registro de Miembros")
-        conn = sqlite3.connect(DB_PATH)
-        cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-        conn.close()
-        cell_options = cells['cell_name'].tolist() if not cells.empty else []
-        with st.form("registro_miembro"):
-            full_name = st.text_input("Nombre completo")
-            age = st.number_input("Edad", min_value=0, max_value=120)
-            contact = st.text_input("Contacto")
-            cell = st.selectbox("Célula", cell_options)
-            sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
-            discipleship_type = st.selectbox("¿En discipulado?", ["Sí", "No"])
-            other_church = st.selectbox("¿Viene de otra iglesia?", ["Sí", "No"])
-            ingreso_date = st.date_input("Fecha de ingreso")
-            ministry = st.text_input("Ministerio")
-            status = st.selectbox("Estado", ["activo", "inactivo"])
-            submit = st.form_submit_button("Registrar Miembro")
-            if submit and full_name:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute("""INSERT INTO members_stats 
-                    (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status)
-                    VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                    (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date.strftime("%Y-%m-%d"), ministry, status))
-                conn.commit()
-                conn.close()
-                st.success(f"Miembro {full_name} registrado en la célula {cell}")
+    with st.form("registro_miembro"):
+        full_name = st.text_input("Nombre completo")
+        age = st.number_input("Edad", min_value=0, max_value=120)
+        contact = st.text_input("Contacto")
+        cell = st.selectbox("Célula", cell_options)
+        sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
+        discipleship_type = st.selectbox("¿En discipulado?", ["Sí", "No"])
+        other_church = st.selectbox("¿Viene de otra iglesia?", ["Sí", "No"])
+        ingreso_date = st.date_input("Fecha de ingreso")
+        ministry = st.text_input("Ministerio")
+        status = st.selectbox("Estado", ["activo", "inactivo"])
+        submit = st.form_submit_button("Registrar Miembro")
 
-    # --- Convertidos ---
-    with tab2:
-        st.subheader("Registro de Convertidos")
-        conn = sqlite3.connect(DB_PATH)
-        cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-        conn.close()
-        cell_options = cells['cell_name'].tolist() if not cells.empty else []
-        with st.form("registro_convertido"):
-            full_name = st.text_input("Nombre completo")
-            age = st.number_input("Edad", min_value=0, max_value=120)
-            contact = st.text_input("Contacto")
-            address = st.text_input("Dirección")
-            assigned_cell = st.selectbox("Célula asignada", cell_options)
-            decision_type = st.selectbox("Decisión", ["Aceptó a Cristo", "Reconciliación"])
-            conversion_date = st.date_input("Fecha de conversión")
-            submit = st.form_submit_button("Registrar Convertido")
-            if submit and full_name:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute("""INSERT INTO new_converts 
-                    (full_name, age, contact, address, assigned_cell, decision_type, conversion_date)
-                    VALUES (?,?,?,?,?,?,?)""",
-                    (full_name, age, contact, address, assigned_cell, decision_type, conversion_date.strftime("%Y-%m-%d")))
-                conn.commit()
-                conn.close()
-                st.success(f"Convertido {full_name} registrado en la célula {assigned_cell}")
+        if submit and full_name:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("""INSERT INTO members_stats 
+                (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status)
+                VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date.strftime("%Y-%m-%d"), ministry, status))
+            conn.commit()
+            conn.close()
+            st.success(f"Miembro {full_name} registrado en la célula {cell}")
+
+# --- Convertidos ---
+with tab2:
+    st.subheader("Registro de Convertidos")
+    conn = sqlite3.connect(DB_PATH)
+    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+    conn.close()
+    cell_options = cells['cell_name'].tolist() if not cells.empty else []
+
+    with st.form("registro_convertido"):
+        full_name = st.text_input("Nombre completo")
+        age = st.number_input("Edad", min_value=0, max_value=120)
+        contact = st.text_input("Contacto")
+        address = st.text_input("Dirección")
+        assigned_cell = st.selectbox("Célula asignada", cell_options)
+        decision_type = st.selectbox("Decisión", ["Aceptó a Cristo", "Reconciliación"])
+        conversion_date = st.date_input("Fecha de conversión")
+        submit = st.form_submit_button("Registrar Convertido")
+
+        if submit and full_name:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("""INSERT INTO new_converts 
+                (full_name, age, contact, address, assigned_cell, decision_type, conversion_date)
+                VALUES (?,?,?,?,?,?,?)""",
+                (full_name, age, contact, address, assigned_cell, decision_type, conversion_date.strftime("%Y-%m-%d")))
+            conn.commit()
+            conn.close()
+            st.success(f"Convertido {full_name} registrado en la célula {assigned_cell}")
 
 # --- Reportes ---
- with tab3:
+with tab3:
     st.subheader("Registro de Reportes de Células")
     conn = sqlite3.connect(DB_PATH)
     cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
@@ -261,6 +265,7 @@ with tab4:
             conn.commit()
             conn.close()
             st.success(f"Descarriado {full_name} registrado en la célula {cell}")
+
 
 # --- Panel ---
 with tab5:
