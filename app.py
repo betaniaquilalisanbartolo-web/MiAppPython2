@@ -191,43 +191,65 @@ else:
                 conn.close()
                 st.success(f"Convertido {full_name} registrado en la célula {assigned_cell}")
 
-  
+    # --- Reportes ---
+    with tab3:
+        st.subheader("Registro de Reportes de Células")
+        conn = sqlite3.connect(DB_PATH)
+        cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+        conn.close()
+        cell_options = cells['cell_name'].tolist() if not cells.empty else []
+        with st.form("registro_reporte"):
+            cell_name = st.selectbox("Célula", cell_options)
+            meeting_date = st.date_input("Fecha de reunión")
+            adults = st.number_input("Adultos", min_value=0)
+            youth = st.number_input("Jóvenes", min_value=0)
+            children = st.number_input("Niños", min_value=0)
+            friends = st.number_input("Amigos", min_value=0)
+            visits = st.number_input("Visitas", min_value=0)
+            house_leader = st.text_input("Líder de casa")
+            biblical_theme = st.text_input("Tema bíblico")
+            central_text = st.text_input("Texto central")
+            offering = st.number_input("Ofrenda", min_value=0.0)
+            needs = st.text_area("Necesidades")
+            spiritual_level = st.selectbox("Nivel espiritual", ["Alto", "Medio", "Bajo"])
+            attendance_level = adults + youth + children + friends
+            submit = st.form_submit_button("Registrar Reporte")
+            if submit and cell_name:
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute("""INSERT INTO cell_reports 
+                    (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
+                conn.commit()
+                conn.close()
+                st.success(f"Reporte registrado para la célula {cell_name}")
 
-# --- Reportes ---
-with tab3:
-    st.subheader("Registro de Reportes de Células")
-    conn = sqlite3.connect(DB_PATH)
-    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-    conn.close()
-    cell_options = cells['cell_name'].tolist() if not cells.empty else []
-
-    with st.form("registro_reporte"):
-        cell_name = st.selectbox("Célula", cell_options)
-        meeting_date = st.date_input("Fecha de reunión")
-        adults = st.number_input("Adultos", min_value=0)
-        youth = st.number_input("Jóvenes", min_value=0)
-        children = st.number_input("Niños", min_value=0)
-        friends = st.number_input("Amigos", min_value=0)
-        visits = st.number_input("Visitas", min_value=0)
-        house_leader = st.text_input("Líder de casa")
-        biblical_theme = st.text_input("Tema bíblico")
-        central_text = st.text_input("Texto central")
-        offering = st.number_input("Ofrenda", min_value=0.0)
-        needs = st.text_area("Necesidades")
-        spiritual_level = st.selectbox("Nivel espiritual", ["Alto", "Medio", "Bajo"])
-        attendance_level = adults + youth + children + friends
-        submit = st.form_submit_button("Registrar Reporte")
-
-        if submit and cell_name:
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("""INSERT INTO cell_reports 
-                (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
-            conn.commit()
-            conn.close()
-            st.success(f"Reporte registrado para la célula {cell_name}")
+    # --- Descarriados ---
+    with tab4:
+        st.subheader("Registro de Descarriados")
+        conn = sqlite3.connect(DB_PATH)
+        cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+        conn.close()
+        cell_options = cells['cell_name'].tolist() if not cells.empty else []
+        with st.form("registro_descarriado"):
+            full_name = st.text_input("Nombre completo")
+            age = st.number_input("Edad", min_value=0, max_value=120)
+            contact = st.text_input("Contacto")
+            cell = st.selectbox("Célula", cell_options)
+            reason = st.text_area("Razón de descarriado")
+            date_reported = st.date_input("Fecha de reporte")
+            submit = st.form_submit_button("Registrar Descarriado")
+            if submit and full_name:
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute("""INSERT INTO descarriados 
+                    (full_name, age, contact, cell, reason, date_reported)
+                    VALUES (?,?,?,?,?,?)""",
+                    (full_name, age, contact, cell, reason, date_reported.strftime("%Y-%m-%d")))
+                conn.commit()
+                conn.close()
+                st.success(f"Descarriado {full_name} registrado en la célula {cell}"
 
 # --- Descarriados ---
 with tab4:
