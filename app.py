@@ -130,8 +130,9 @@ else:
         "🙌 Convertidos",
         "📌 Reportes",
         "🚨 Descarriados",
-        "📊 Panel",
         "⚙️ Administración"
+        "📊 Panel",
+       
     ])
 
     # --- Miembros ---
@@ -250,6 +251,23 @@ else:
                 conn.commit()
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
+                  # --- Administración ---
+    with tab6:
+     st.subheader("⚙️ Administración")
+
+    st.markdown("### 🌱 Registrar nueva célula y líder")
+    cell_name = st.text_input("Nombre de la célula")
+    leader = st.text_input("Nombre del líder")
+    if st.button("Registrar célula"):
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        try:
+            c.execute("INSERT INTO cells (cell_name, leader) VALUES (?,?)", (cell_name, leader))
+            conn.commit()
+            st.success(f"Célula '{cell_name}' registrada con líder {leader}")
+        except sqlite3.IntegrityError:
+            st.error("Esa célula ya existe")
+        conn.close()
 
 
     # --- Panel ---
@@ -327,20 +345,4 @@ else:
         else:
             st.info("Agrega reportes de células para visualizar métricas de ofrendas.")
 
-    # --- Administración ---
-    with tab6:
-     st.subheader("⚙️ Administración")
-
-    st.markdown("### 🌱 Registrar nueva célula y líder")
-    cell_name = st.text_input("Nombre de la célula")
-    leader = st.text_input("Nombre del líder")
-    if st.button("Registrar célula"):
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        try:
-            c.execute("INSERT INTO cells (cell_name, leader) VALUES (?,?)", (cell_name, leader))
-            conn.commit()
-            st.success(f"Célula '{cell_name}' registrada con líder {leader}")
-        except sqlite3.IntegrityError:
-            st.error("Esa célula ya existe")
-        conn.close()
+  
