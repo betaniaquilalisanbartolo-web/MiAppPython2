@@ -297,7 +297,7 @@ with tab6:
     st.markdown("### 📝 Informe por Célula")
 
 # Seleccionar célula
-      if not df_reports.empty:
+ if not df_reports.empty:
     celulas_disponibles = df_reports['cell_name'].unique().tolist()
     celula_seleccionada = st.selectbox("Selecciona una célula", celulas_disponibles)
 
