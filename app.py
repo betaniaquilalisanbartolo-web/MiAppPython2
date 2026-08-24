@@ -2,7 +2,6 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import os
-
 # --- Estado de sesión ---
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
