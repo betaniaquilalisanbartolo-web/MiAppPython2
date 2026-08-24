@@ -133,35 +133,41 @@ else:
         "⚙️ Administración",
         "📊 Panel"
     ])
-# --- Miembros ---
-with tab1:
-    st.subheader("Registro de Miembros")
-    conn = sqlite3.connect(DB_PATH)
-    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-    conn.close()
-    cell_options = cells['cell_name'].tolist() if not cells.empty else []
-    with st.form("registro_miembro"):
-        full_name = st.text_input("Nombre completo")
-        age = st.number_input("Edad", min_value=0, max_value=120)
-        contact = st.text_input("Contacto")
-        cell = st.selectbox("Célula", cell_options)
-        sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
-        discipleship_type = st.selectbox("¿En discipulado?", ["Sí", "No"])
-        other_church = st.selectbox("¿Viene de otra iglesia?", ["Sí", "No"])
-        ingreso_date = st.date_input("Fecha de ingreso")
-        ministry = st.text_input("Ministerio")
-        status = st.selectbox("Estado", ["activo", "inactivo"])
-        submit = st.form_submit_button("Registrar Miembro")
-        if submit and full_name:
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("""INSERT INTO members_stats 
-                (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status)
-                VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date.strftime("%Y-%m-%d"), ministry, status))
-            conn.commit()
-            conn.close()
-            st.success(f"Miembro {full_name} registrado en la célula {cell}")
+
+    # --- Miembros ---
+    with tab1:
+        st.subheader("Registro de Miembros")
+        conn = sqlite3.connect(DB_PATH)
+        cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+        conn.close()
+        cell_options = cells['cell_name'].tolist() if not cells.empty else []
+        with st.form("registro_miembro"):
+            full_name = st.text_input("Nombre completo")
+            age = st.number_input("Edad", min_value=0, max_value=120)
+            contact = st.text_input("Contacto")
+            cell = st.selectbox("Célula", cell_options)
+            sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
+            discipleship_type = st.selectbox("¿En discipulado?", ["Sí", "No"])
+            other_church = st.selectbox("¿Viene de otra iglesia?", ["Sí", "No"])
+            ingreso_date = st.date_input("Fecha de ingreso")
+            ministry = st.text_input("Ministerio")
+            status = st.selectbox("Estado", ["activo", "inactivo"])
+            submit = st.form_submit_button("Registrar Miembro")
+            if submit and full_name:
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute("""INSERT INTO members_stats 
+                    (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date.strftime("%Y-%m-%d"), ministry, status))
+                conn.commit()
+                conn.close()
+                st.success(f"Miembro {full_name} registrado en la célula {cell}")
+
+# --- Convertidos ---
+with tab2:
+    st.subheader("Registro de Convertidos")
+    # resto del código...
 
 # --- Convertidos ---
 with tab2:
