@@ -133,8 +133,8 @@ else:
         "⚙️ Administración",
         "📊 Panel"
     ])
-    # --- Miembros ---
-    with tab1:
+# --- Miembros ---
+with tab1:
         st.subheader("Registro de Miembros")
         conn = sqlite3.connect(DB_PATH)
         cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
@@ -163,8 +163,8 @@ else:
                 conn.close()
                 st.success(f"Miembro {full_name} registrado en la célula {cell}")
 
-    # --- Convertidos ---
-    with tab2:
+# --- Convertidos ---
+with tab2:
         st.subheader("Registro de Convertidos")
         conn = sqlite3.connect(DB_PATH)
         cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
@@ -190,8 +190,8 @@ else:
                 conn.close()
                 st.success(f"Convertido {full_name} registrado en la célula {assigned_cell}")
 
-    # --- Reportes ---
-    with tab3:
+# --- Reportes ---
+with tab3:
         st.subheader("Registro de Reportes de Células")
         conn = sqlite3.connect(DB_PATH)
         cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
@@ -224,8 +224,8 @@ else:
                 conn.close()
                 st.success(f"Reporte registrado para la célula {cell_name}")
 
-    # --- Descarriados ---
-    with tab4:
+# --- Descarriados ---
+with tab4:
          st.subheader("Registro de Descarriados")
          conn = sqlite3.connect(DB_PATH)
          cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
@@ -249,8 +249,9 @@ else:
                 conn.commit()
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
-                # --- Administración ---
-    with tab5:
+                
+# --- Administración ---
+with tab5:
      st.subheader("⚙️ Administración")
 
     st.markdown("### 🌱 Registrar nueva célula y líder")
@@ -279,9 +280,10 @@ else:
         conn.commit()
         conn.close()
         st.success("Todos los datos fueron eliminados. Ahora las tablas están vacías.")
-        # --- Panel ---
-    with tab6:
-     st.subheader("📊 Panel de Control y Gráficas")
+        
+# --- Panel ---
+with tab6:
+    st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
     conn = sqlite3.connect(DB_PATH)
@@ -364,8 +366,8 @@ else:
             st.bar_chart(ofrendas_por_celula)
             
 # --- Panel ---
-    with tab6:
-     st.subheader("📊 Panel de Control y Gráficas")
+with tab6:
+    st.subheader("📊 Panel de Control y Gráficas")
  
     # Conexión y carga de datos
     conn = sqlite3.connect(DB_PATH)
