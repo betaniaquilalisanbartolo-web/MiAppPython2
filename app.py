@@ -309,36 +309,3 @@ with tab6:
 
     st.markdown("---")
 
-    # Convertidos por mes
-    if not df_conv.empty:
-        df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'], errors='coerce')
-        conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
-        st.line_chart(conv_mes)
-
-    # Reportes
-    if not df_reports.empty:
-        df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'], errors='coerce')
-        amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
-        st.bar_chart(amigos_mes)
-
-        crecimiento = df_reports.groupby('cell_name')['attendance_level'].sum()
-        st.bar_chart(crecimiento)
-
-    # Crecimiento y deserciones
-    if not df_members.empty or not df_descarriados.empty:
-        st.markdown("### 👥 Crecimiento y Deserciones")
-        df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
-        df_descarriados['date_reported'] = pd.to_datetime(df_descarriados['date_reported'], errors='coerce')
-        miembros_mes = df_members.groupby(df_members['ingreso_date'].dt.to_period("M")).size()
-        deserciones_mes = df_descarriados.groupby(df_descarriados['date_reported'].dt.to_period("M")).size()
-        grafico_crecimiento = pd.DataFrame({
-            "Miembros Activos": miembros_mes,
-            "Deserciones": deserciones_mes
-        }).fillna(0)
-        st.line_chart(grafico_crecimiento)
-
-    # Amigos alcanzados
-    if not df_reports.empty:
-        st.markdown("### 🤝 Amigos Alcanzados por Mes")
-        amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
-        st.area_chart(amigos_mes)
