@@ -249,14 +249,13 @@ with tab4:
                 conn.commit()
                 conn.close()
                 st.success(f"Descarriado {full_name} registrado en la célula {cell}")
-                
 # --- Administración ---
 with tab5:
-        st.subheader("⚙️ Administración")
+    st.subheader("⚙️ Administración")
 
-        st.markdown("### 🌱 Registrar nueva célula y líder")
-        cell_name = st.text_input("Nombre de la célula")
-         leader = st.text_input("Nombre del líder")
+    st.markdown("### 🌱 Registrar nueva célula y líder")
+    cell_name = st.text_input("Nombre de la célula")
+    leader = st.text_input("Nombre del líder")
 
     if st.button("Registrar célula"):
         conn = sqlite3.connect(DB_PATH)
@@ -280,10 +279,10 @@ with tab5:
         conn.commit()
         conn.close()
         st.success("Todos los datos fueron eliminados. Ahora las tablas están vacías.")
-        
+
 # --- Panel ---
 with tab6:
-        st.subheader("📊 Panel de Control y Gráficas")
+    st.subheader("📊 Panel de Control y Gráficas")
 
     # Conexión y carga de datos
     conn = sqlite3.connect(DB_PATH)
@@ -292,34 +291,27 @@ with tab6:
     df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
     df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
     conn.close()
-    
+
     # --- Informe por célula ---
-       st.markdown("### 📝 Informe por Célula")
+    st.markdown("### 📝 Informe por Célula")
+    if not df_reports.empty:
+        celulas_disponibles = df_reports['cell_name'].unique().tolist()
+        celula_seleccionada = st.selectbox("Selecciona una célula", celulas_disponibles)
 
-# Seleccionar célula
-if not df_reports.empty:
-    celulas_disponibles = df_reports['cell_name'].unique().tolist()
-    celula_seleccionada = st.selectbox("Selecciona una célula", celulas_disponibles)
+        informe_celula = df_reports[df_reports['cell_name'] == celula_seleccionada]
+        st.dataframe(informe_celula, use_container_width=True)
 
-    # Filtrar datos de esa célula
-    informe_celula = df_reports[df_reports['cell_name'] == celula_seleccionada]
-
-    # Mostrar tabla
-    st.dataframe(informe_celula, use_container_width=True)
-
-    # Botón para descargar
-    csv = informe_celula.to_csv(index=False).encode('utf-8')
+        csv = informe_celula.to_csv(index=False).encode('utf-8')
         st.download_button(
-        label="📥 Descargar informe en CSV",
-        data=csv,
-        file_name=f"informe_{celula_seleccionada}.csv",
-        mime="text/csv"
-    )
-else:
-    st.info("No hay reportes registrados aún para generar informes.")
+            label="📥 Descargar informe en CSV",
+            data=csv,
+            file_name=f"informe_{celula_seleccionada}.csv",
+            mime="text/csv"
+        )
+    else:
+        st.info("No hay reportes registrados aún para generar informes.")
 
-
-    # KPIs
+    # --- KPIs ---
     st.markdown("### 📈 Indicadores Clave del Sistema")
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
     with kpi1:
@@ -337,13 +329,13 @@ else:
 
     st.markdown("---")
 
-    # Convertidos por mes
+    # --- Convertidos por mes ---
     if not df_conv.empty:
         df_conv['conversion_date'] = pd.to_datetime(df_conv['conversion_date'], errors='coerce')
         conv_mes = df_conv.groupby(df_conv['conversion_date'].dt.to_period("M")).size()
         st.line_chart(conv_mes)
 
-    # Reportes
+    # --- Reportes ---
     if not df_reports.empty:
         df_reports['meeting_date'] = pd.to_datetime(df_reports['meeting_date'], errors='coerce')
         amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
@@ -352,26 +344,29 @@ else:
         crecimiento = df_reports.groupby('cell_name')['attendance_level'].sum()
         st.bar_chart(crecimiento)
 
-    # Crecimiento y deserciones
+    # --- Crecimiento y deserciones ---
     if not df_members.empty or not df_descarriados.empty:
         st.markdown("### 👥 Crecimiento y Deserciones")
         df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
         df_descarriados['date_reported'] = pd.to_datetime(df_descarriados['date_reported'], errors='coerce')
+
         miembros_mes = df_members.groupby(df_members['ingreso_date'].dt.to_period("M")).size()
         deserciones_mes = df_descarriados.groupby(df_descarriados['date_reported'].dt.to_period("M")).size()
+
         grafico_crecimiento = pd.DataFrame({
             "Miembros Activos": miembros_mes,
             "Deserciones": deserciones_mes
         }).fillna(0)
+
         st.line_chart(grafico_crecimiento)
 
-    # Amigos alcanzados
+    # --- Amigos alcanzados ---
     if not df_reports.empty:
         st.markdown("### 🤝 Amigos Alcanzados por Mes")
         amigos_mes = df_reports.groupby(df_reports['meeting_date'].dt.to_period("M"))['friends'].sum()
         st.area_chart(amigos_mes)
 
-    # Asistencia y ofrendas
+    # --- Asistencia y ofrendas ---
     if not df_reports.empty:
         st.markdown("### 📊 Gráficos de Células y Finanzas")
         grafico1, grafico2 = st.columns(2)
@@ -390,41 +385,5 @@ else:
             st.write("💰 *Ofrendas por Célula*")
             ofrendas_por_celula = df_reports.groupby('cell_name')['offering'].sum()
             st.bar_chart(ofrendas_por_celula)
-            
-# --- Panel ---
-with tab6:
-        st.subheader("📊 Panel de Control y Gráficas")
- 
-    # Conexión y carga de datos
-    conn = sqlite3.connect(DB_PATH)
-    df_conv = pd.read_sql_query("SELECT * FROM new_converts", conn)
-    df_reports = pd.read_sql_query("SELECT * FROM cell_reports", conn)
-    df_members = pd.read_sql_query("SELECT * FROM members_stats", conn)
-    df_descarriados = pd.read_sql_query("SELECT * FROM descarriados", conn)
-    conn.close()
-
-    # --- Gráfica de crecimiento vs deserciones ---
-    if not df_members.empty or not df_descarriados.empty:
-        st.markdown("### 📊 Comparación de Crecimiento vs Deserciones")
-
-        # Convertir fechas
-        df_members['ingreso_date'] = pd.to_datetime(df_members['ingreso_date'], errors='coerce')
-        df_descarriados['date_reported'] = pd.to_datetime(df_descarriados['date_reported'], errors='coerce')
-
-        # Agrupar por mes
-        miembros_mes = df_members.groupby(df_members['ingreso_date'].dt.to_period("M")).size()
-        deserciones_mes = df_descarriados.groupby(df_descarriados['date_reported'].dt.to_period("M")).size()
-
-        # DataFrame comparativo
-        grafico_comparacion = pd.DataFrame({
-            "Miembros Activos": miembros_mes,
-            "Deserciones": deserciones_mes
-        }).fillna(0)
-
-        # Mostrar gráfica
-        st.line_chart(grafico_comparacion, use_container_width=True)
-    else:
-        st.info("No hay datos suficientes para mostrar crecimiento y deserciones.")
 
 
-        
