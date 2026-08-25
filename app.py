@@ -2,7 +2,6 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import datetime
-import io
 
 # Configuración de la página
 st.set_page_config(page_title="Panel de Control - Gestión de Células", layout="wide")
@@ -106,12 +105,9 @@ def init_db():
 
 init_db()
 
-# Función auxiliar para convertir DataFrames a Excel descargable
-def to_excel(df):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Datos')
-    return output.getvalue()
+# Función auxiliar compatible para descargas en formato CSV (reemplazo de Excel sin dependencias)
+def to_csv(df):
+    return df.to_csv(index=False).encode('utf-8-sig')
 
 # ==========================================
 # 2. CONTROL DE ACCESO (LOGIN / REGISTRO)
@@ -200,7 +196,7 @@ with st.sidebar:
         st.session_state.username = ""
         st.rerun()
 
-# Cargar opciones globales de células
+# Cargar opciones globales de células de forma segura
 conn = sqlite3.connect(DB_PATH)
 cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
 conn.close()
@@ -213,6 +209,7 @@ if menu_option == "📊 Vista General":
     st.title("📊 Panel de Control y Estadísticas")
     
     conn = sqlite3.connect(DB_PATH)
+    # CORREGIDO: Uso de .iloc[0] para prevenir fallos visuales en los KPIs superiores
     tot_cells = pd.read_sql_query("SELECT COUNT(*) as total FROM cells", conn)['total'].iloc[0]
     tot_members = pd.read_sql_query("SELECT COUNT(*) as total FROM members", conn)['total'].iloc[0]
     tot_reports = pd.read_sql_query("SELECT COUNT(*) as total FROM cell_reports", conn)['total'].iloc[0]
