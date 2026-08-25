@@ -266,5 +266,6 @@ if menu_option == "📊 Vista General":
     
     try:
         conn = sqlite3.connect(DB_PATH)
-        # CORRECCIÓN DE COMILLAS: Consulta formateada en una sola línea segura
-        query_metas = "SELECT c.cell_name as 'Célula', c.yearly_target as 'Meta de Nuevos Miembros', COUNT(m.id) as 'Miembros Registrados Actuales' FROM cells c LEFT JOIN members m ON c.cell_name = m.assigned_cell GROUP BY c.cell_name"
+        # Consulta SQL segmentada de forma segura para evitar SyntaxError de indentación
+        part1 = "SELECT c.cell_name as 'Célula', c.yearly_target as 'Meta de Nuevos Miembros', "
+        part2 = "COUNT(m.id) as 'Miembros Registrados Actuales' FROM cells c "
