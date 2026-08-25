@@ -266,8 +266,8 @@ else:
                 conn.commit()
                 conn.close()
                 st.success("Reporte de célula guardado exitosamente.")
-
-    # --- Pestaña de Descarrilados ---
+                
+# --- Pestaña de Descarrilados ---
 with tab_descarrilados:
     st.subheader("Registro y Seguimiento de Personas Apartadas / Descarrilados")
     
@@ -302,6 +302,10 @@ with tab_descarrilados:
                 st.success(f"Registro de {person_name} guardado correctamente.")
             else:
                 st.error("El nombre de la persona es obligatorio.")
+    
+
+    
+
 
     
 
