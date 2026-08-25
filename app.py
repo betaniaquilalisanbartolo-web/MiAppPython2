@@ -1,240 +1,113 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-import os
+from datetime import datetime
 
-# --- Base de datos ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "database.db")
+# Configuración del archivo de base de datos
+DB_PATH = "celulas.db"
 
+# ==========================================
+# 1. INICIALIZACIÓN DE LA BASE DE DATOS
+# ==========================================
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    # Tablas principales
-    c.execute("""CREATE TABLE IF NOT EXISTS accounts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE,
-        password TEXT
-    )""")
-    c.execute("""CREATE TABLE IF NOT EXISTS cells (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cell_name TEXT UNIQUE,
-        leader TEXT
-    )""")
-    c.execute("""CREATE TABLE IF NOT EXISTS members_stats (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT,
-        age INTEGER,
-        contact TEXT,
-        cell TEXT,
-        sex TEXT,
-        discipleship_type TEXT,
-        other_church TEXT,
-        ingreso_date TEXT,
-        ministry TEXT,
-        status TEXT
-    )""")
-    c.execute("""CREATE TABLE IF NOT EXISTS new_converts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT,
-        age INTEGER,
-        contact TEXT,
-        address TEXT,
-        assigned_cell TEXT,
-        decision_type TEXT,
-        conversion_date TEXT
-    )""")
-    c.execute("""CREATE TABLE IF NOT EXISTS cell_reports (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cell_name TEXT,
-        meeting_date TEXT,
-        adults INTEGER,
-        youth INTEGER,
-        children INTEGER,
-        friends INTEGER,
-        visits INTEGER,
-        house_leader TEXT,
-        biblical_theme TEXT,
-        central_text TEXT,
-        offering REAL,
-        needs TEXT,
-        spiritual_level TEXT,
-        attendance_level INTEGER
-    )""")
-    c.execute("""CREATE TABLE IF NOT EXISTS descarriados (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT,
-        age INTEGER,
-        contact TEXT,
-        cell TEXT,
-        reason TEXT,
-        date_reported TEXT
-    )""")
-    c.execute("""CREATE TABLE IF NOT EXISTS new_converts_dropped (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT,
-        drop_date TEXT,
-        reason TEXT,
-        important_notes TEXT
-    )""")
+    
+    # Tabla de Células (Administración)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS cells (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cell_name TEXT NOT NULL,
+            leader_name TEXT NOT NULL,
+            sector TEXT
+        )
+    """)
+    
+    # Tabla de Reportes de Células
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS cell_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cell_name TEXT,
+            meeting_date TEXT,
+            adults INTEGER,
+            youth INTEGER,
+            children INTEGER,
+            friends INTEGER,
+            visits INTEGER,
+            house_leader TEXT,
+            biblical_theme TEXT,
+            central_text TEXT,
+            offering REAL,
+            needs TEXT,
+            spiritual_level TEXT,
+            attendance_level INTEGER
+        )
+    """)
+    
+    # Tabla de Descarrilados / Seguimiento
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS backsliders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            person_name TEXT NOT NULL,
+            cell_name TEXT,
+            last_attendance TEXT,
+            reason TEXT,
+            action_plan TEXT,
+            status TEXT
+        )
+    """)
     conn.commit()
     conn.close()
 
+# Ejecutar inicialización de tablas al arrancar la app
 init_db()
 
-# --- Estado de sesión ---
-if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = False
-    st.session_state["username"] = ""
+# ==========================================
+# 2. ESTRUCTURA DE PESTAÑAS EN STREAMLIT
+# ==========================================
+st.title("Sistema de Gestión de Células")
 
-# --- Inicio/Login y Registro ---
-if not st.session_state["logged_in"]:
-    tab_login, tab_register = st.tabs(["🔑 Iniciar Sesión", "🆕 Registrar Cuenta"])
+tab_admin, tab_reportes, tab_descarrilados = st.tabs([
+    "⚙️ Administración", 
+    "📝 Reportes de Células", 
+    "👣 Seguimiento de Descarrilados"
+])
 
-    with tab_login:
-        st.subheader("Iniciar Sesión")
-        username = st.text_input("Usuario")
-        password = st.text_input("Contraseña", type="password")
-        if st.button("Entrar"):
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("SELECT * FROM accounts WHERE username=? AND password=?", (username, password))
-            user = c.fetchone()
-            conn.close()
-            if user:
-                st.session_state["logged_in"] = True
-                st.session_state["username"] = username
-                st.rerun()
-            else:
-                st.error("Usuario o contraseña incorrectos")
-
-    with tab_register:
-        st.subheader("Registrar nueva cuenta")
-        new_user = st.text_input("Nuevo usuario")
-        new_pass = st.text_input("Nueva contraseña", type="password")
-        if st.button("Registrar"):
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            try:
-                c.execute("INSERT INTO accounts (username, password) VALUES (?,?)", (new_user, new_pass))
-                conn.commit()
-                st.success(f"Cuenta '{new_user}' creada correctamente")
-            except sqlite3.IntegrityError:
-                st.error("Ese usuario ya existe")
-            conn.close()
-
-else:
-    # --- MENÚ DE USUARIO AUTENTICADO ---
-    st.sidebar.info(f"Sesión activa: {st.session_state['username']}")
-    if st.sidebar.button("Cerrar sesión"):
-        st.session_state["logged_in"] = False
-        st.session_state["username"] = ""
-        st.rerun()
-
-    # --- Pestañas principales ---
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "👤 Miembros",
-        "🙌 Convertidos",
-        "📌 Reportes",
-        "🚨 Descarriados",
-        "⚙️ Administración",
-        "📊 Panel"
-    ])
-
-    # --- 1. Miembros ---
-    with tab1:
-        st.subheader("Registro de Miembros")
-        conn = sqlite3.connect(DB_PATH)
-        cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-        conn.close()
-        cell_options = cells['cell_name'].tolist() if not cells.empty else []
+# ==========================================
+# PESTAÑA A: ADMINISTRACIÓN (REGISTRO CÉLULAS)
+# ==========================================
+with tab_admin:
+    st.subheader("Registro de Nuevas Células y Líderes")
+    
+    with st.form("registro_celula"):
+        new_cell_name = st.text_input("Nombre de la Célula")
+        cell_leader = st.text_input("Nombre del Líder")
+        cell_sector = st.text_input("Sector / Zona")
         
-        with st.form("registro_miembro"):
-            full_name = st.text_input("Nombre completo")
-            age = st.number_input("Edad", min_value=0, max_value=120)
-            contact = st.text_input("Contacto")
-            cell = st.selectbox("Célula", cell_options)
-            sex = st.selectbox("Sexo", ["Masculino", "Femenino"])
-            discipleship_type = st.selectbox("¿En discipulado?", ["Sí", "No"])
-            other_church = st.selectbox("¿Viene de otra iglesia?", ["Sí", "No"])
-            ingreso_date = st.date_input("Fecha de ingreso")
-            ministry = st.text_input("Ministerio")
-            status = st.selectbox("Estado", ["activo", "inactivo"])
-            submit = st.form_submit_button("Registrar Miembro")
-            
-            if submit and full_name:
+        submit_cell = st.form_submit_button("Registrar Célula")
+        
+        if submit_cell:
+            if new_cell_name and cell_leader:
                 conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
-                c.execute("""INSERT INTO members_stats 
-                    (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date, ministry, status)
-                    VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                    (full_name, age, contact, cell, sex, discipleship_type, other_church, ingreso_date.strftime("%Y-%m-%d"), ministry, status))
+                c.execute("""
+                    INSERT INTO cells (cell_name, leader_name, sector) 
+                    VALUES (?, ?, ?)
+                """, (new_cell_name, cell_leader, cell_sector))
                 conn.commit()
                 conn.close()
-                st.success(f"Miembro {full_name} registrado en la célula {cell}")
-
-    # --- 2. Convertidos ---
-    with tab2:
-        st.subheader("Registro de Convertidos")
-        conn = sqlite3.connect(DB_PATH)
-        cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-        converts_query = pd.read_sql_query("SELECT full_name FROM new_converts", conn)
-        conn.close()
-        
-        cell_options = cells['cell_name'].tolist() if not cells.empty else []
-        convert_names = converts_query['full_name'].tolist() if not converts_query.empty else []
-        
-        sub_tab_alta, sub_tab_baja = st.tabs(["➕ Registrar Alta", "🚨 Reportar Deserción o Abandono"])
-        
-        with sub_tab_alta:
-            with st.form("registro_convertido"):
-                full_name = st.text_input("Nombre completo")
-                age = st.number_input("Edad", min_value=0, max_value=120)
-                contact = st.text_input("Contacto")
-                address = st.text_input("Dirección")
-                assigned_cell = st.selectbox("Célula asignada", cell_options)
-                decision_type = st.selectbox("Decisión", ["Aceptó a Cristo", "Reconciliación"])
-                conversion_date = st.date_input("Fecha de conversión")
-                submit = st.form_submit_button("Registrar Convertido")
-                
-                if submit and full_name:
-                    conn = sqlite3.connect(DB_PATH)
-                    c = conn.cursor()
-                    c.execute("""INSERT INTO new_converts 
-                        (full_name, age, contact, address, assigned_cell, decision_type, conversion_date)
-                        VALUES (?,?,?,?,?,?,?)""",
-                        (full_name, age, contact, address, assigned_cell, decision_type, conversion_date.strftime("%Y-%m-%d")))
-                    conn.commit()
-                    conn.close()
-                    st.success(f"Convertido {full_name} registrado en la célula {assigned_cell}")
-                    st.rerun()
-
-        with sub_tab_baja:
-            st.markdown("**Utiliza este espacio si un nuevo convertido dejó de asistir para mantener un control de los motivos.**")
-            if convert_names:
-                with st.form("registro_desercion_convertido"):
-                    selected_convert = st.selectbox("Seleccione el Nuevo Convertido", convert_names)
-                    drop_date = st.date_input("Fecha en que se desertó / distanció")
-                    drop_reason = st.selectbox("Motivo principal", ["Falta de tiempo", "Problemas familiares", "Regresó al mundo", "Cambio de domicilio", "Desinterés", "Otro"])
-                    important_notes = st.text_area("Datos importantes / Notas de seguimiento pastoral")
-                    submit_drop = st.form_submit_button("💾 Guardar Historial de Deserción")
-                    
-                    if submit_drop:
-                        conn = sqlite3.connect(DB_PATH)
-                        c = conn.cursor()
-                        c.execute("""INSERT INTO new_converts_dropped (full_name, drop_date, reason, important_notes)
-                                     VALUES (?, ?, ?, ?)""", 
-                                  (selected_convert, drop_date.strftime("%Y-%m-%d"), drop_reason, important_notes))
-                        conn.commit()
-                        conn.close()
-                        st.warning(f"Se ha registrado el abandono de {selected_convert} para evaluación consolidada.")
+                st.success(f"Célula '{new_cell_name}' con líder '{cell_leader}' registrada con éxito.")
+                st.rerun()
             else:
-                st.info("No hay nuevos convertidos registrados en el sistema para procesar una baja.")
+                st.error("Por favor, rellene los campos obligatorios: Nombre de Célula y Líder.")
 
-
-# --- 3. Reportes ---
-with tab3:
+# ==========================================
+# PESTAÑA B: REGISTRO DE REPORTES
+# ==========================================
+with tab_reportes:
     st.subheader("Registro de Reportes de Células")
+    
+    # Consulta de células para desplegar opciones del menú
     conn = sqlite3.connect(DB_PATH)
     cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
     conn.close()
@@ -258,31 +131,35 @@ with tab3:
         submit_report = st.form_submit_button("Guardar Reporte")
         
         if submit_report:
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute("""INSERT INTO cell_reports 
-                (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
-            conn.commit()
-            conn.close()
-            st.success("Reporte de célula guardado exitosamente.")
-            st.rerun()
+            if cell_name:
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                c.execute("""INSERT INTO cell_reports 
+                    (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
+                conn.commit()
+                conn.close()
+                st.success("Reporte de célula guardado exitosamente.")
+                st.rerun()
+            else:
+                st.error("Primero debe registrar una célula en la pestaña de Administración.")
 
-
-# --- 4. Descarrilados ---
+# ==========================================
+# PESTAÑA C: SEGUIMIENTO DE DESCARRILADOS
+# ==========================================
 with tab_descarrilados:
     st.subheader("Registro y Seguimiento de Personas Apartadas / Descarrilados")
     
-    # Obtenemos las células activas para asignarle la persona a una célula responsable
+    # Consulta de células para asignar responsabilidades de visitación
     conn = sqlite3.connect(DB_PATH)
     cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
     conn.close()
-    cell_options = cells_df['cell_name'].tolist() if not cells_df.empty else []
+    cell_options_desc = cells_df['cell_name'].tolist() if not cells_df.empty else []
 
     with st.form("registro_descarrilado"):
         person_name = st.text_input("Nombre Completo de la Persona")
-        assigned_cell = st.selectbox("Célula Responsable del Seguimiento", cell_options)
+        assigned_cell = st.selectbox("Célula Responsable del Seguimiento", cell_options_desc)
         last_attendance = st.date_input("Fecha aproximada de última asistencia")
         reason = st.text_area("Motivo del alejamiento (si se conoce)")
         action_plan = st.text_input("Acción a tomar (Ej: Visita, llamada, oración)")
@@ -306,33 +183,6 @@ with tab_descarrilados:
             else:
                 st.error("El nombre de la persona es obligatorio.")
 
-    
-    # --- Pestaña de Administración ---
-with tab_admin:
-    st.subheader("Administración: Registro de Nuevas Células")
-    
-    with st.form("registro_celula"):
-        new_cell_name = st.text_input("Nombre de la Célula")
-        cell_leader = st.text_input("Nombre del Líder de la Célula")
-        cell_sector = st.text_input("Sector / Zona (Opcional)")
-        
-        submit_cell = st.form_submit_button("Registrar Célula")
-        
-        if submit_cell:
-            if new_cell_name and cell_leader:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                # Asegúrate de que tu tabla 'cells' tenga estas columnas
-                c.execute("""
-                    INSERT INTO cells (cell_name, leader_name, sector) 
-                    VALUES (?, ?, ?)
-                """, (new_cell_name, cell_leader, cell_sector))
-                conn.commit()
-                conn.close()
-                st.success(f"Célula '{new_cell_name}' registrada con éxito.")
-                st.rerun() # Recarga la app para que aparezca en el selectbox de reportes
-            else:
-                st.error("Por favor, llena los campos obligatorios: Nombre y Líder."
                          
 
     # --- Panel / Dashboard Mejorado ---
