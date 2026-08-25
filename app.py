@@ -1,342 +1,52 @@
-import os
-import sqlite3
-from datetime import datetime
-import pandas as pd
-import streamlit as st
-
-# Configuración de la página
-st.set_page_config(
-    page_title="Panel de Control - Gestión de Células", layout="wide"
-)
-
-DB_PATH = "celulas.db"
-MEDIA_DIR = "imagenes_reportes"
-
-# Crear directorio de imágenes si no existe
-if not os.path.exists(MEDIA_DIR):
-    os.makedirs(MEDIA_DIR)
-
-
-# ==========================================
-# 1. INICIALIZACIÓN DE LA BASE DE DATOS
-# ==========================================
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-
-    # Tabla de Usuarios (Credenciales)
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT DEFAULT 'Usuario'
-    )""")
-
-    c.execute("SELECT COUNT(*) FROM usuarios")
-    if c.fetchone()[0] == 0:
-        c.execute(
-            "INSERT INTO usuarios (username, password, role) VALUES (?, ?, ?)",
-            ("admin", "admin123", "Administrador"),
-        )
-
-    # Tabla de Células
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS cells (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cell_name TEXT UNIQUE NOT NULL,
-        leader_name TEXT NOT NULL,
-        sector TEXT,
-        yearly_target INTEGER DEFAULT 10
-    )""")
-
-    # Tabla de Nuevos Miembros
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS members (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT NOT NULL,
-        phone TEXT,
-        email TEXT,
-        address TEXT,
-        birth_date TEXT,
-        gender TEXT,
-        marital_status TEXT,
-        assigned_cell TEXT,
-        conversion_date TEXT,
-        baptized TEXT,
-        baptism_date TEXT,
-        membership_status TEXT,
-        emergency_contact TEXT,
-        emergency_phone TEXT,
-        prayer_requests TEXT,
-        invited_by TEXT,
-        spiritual_gift TEXT,
-        family_members INTEGER,
-        observations TEXT
-    )""")
-
-    # Tabla de Reportes de Células
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS cell_reports (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cell_name TEXT,
-        meeting_date TEXT,
-        adults INTEGER,
-        youth INTEGER,
-        children INTEGER,
-        friends INTEGER,
-        visits INTEGER,
-        home_leader TEXT,
-        biblical_topic TEXT,
-        central_text TEXT,
-        offering REAL,
-        needs TEXT,
-        spiritual_level TEXT,
-        attendance_level INTEGER,
-        foto_path TEXT
-    )""")
-
-    # Tabla de Descarrilados / Seguimiento
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS backsliders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person_name TEXT NOT NULL,
-        phone TEXT,
-        cell_name TEXT,
-        last_attendance TEXT,
-        risk_level TEXT,
-        reason TEXT,
-        assigned_visitor TEXT,
-        action_plan TEXT,
-        visit_date TEXT,
-        status TEXT,
-        observations TEXT,
-        contact_method TEXT,
-        spiritual_diagnosis TEXT
-    )""")
-
-    # Tabla: Calendario de Actividades Ministeriales
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS calendar_events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_date TEXT NOT NULL,
-        event_time TEXT NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        category TEXT,
-        target_cell TEXT DEFAULT 'Todas'
-    )""")
-
-    conn.commit()
-    conn.close()
-
-
-try:
-    init_db()
-except Exception as e:
-    st.error(f"Error al inicializar la Base de Datos: {e}")
-
-
-# Función para exportar a CSV compatible con Excel
-def to_csv(df):
-    return df.to_csv(index=False).encode("utf-8-sig")
-
-
-# ==========================================
-# 2. CONTROL DE ACCESO (INICIO / REGISTRO)
-# ==========================================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
-if "role" not in st.session_state:
-    st.session_state.role = "Usuario"
-
-if not st.session_state.logged_in:
-    st.markdown(
-        "<h2 style='text-align: center;'>🔐 Acceso al Sistema Ministerial</h2>",
-        unsafe_allow_html=True,
-    )
-    col1, col2, col3 = st.columns([1, 2, 1])
-
-    with col2:
-        tab_login, tab_signup = st.tabs(
-            ["🔑 Iniciar Sesión", "📝 Crear una Cuenta"]
-        )
-
-        with tab_login:
-            with st.form("login_form"):
-                user_input = st.text_input("Usuario", key="login_user")
-                pass_input = st.text_input(
-                    "Contraseña", type="password", key="login_pass"
-                )
-                login_button = st.form_submit_button("Ingresar al Panel")
-
-                if login_button:
-                    if user_input and pass_input:
-                        conn = sqlite3.connect(DB_PATH)
-                        c = conn.cursor()
-                        c.execute(
-                            "SELECT username, role FROM usuarios WHERE username"
-                            " = ? AND password = ?",
-                            (user_input, pass_input),
-                        )
-                        user_record = c.fetchone()
-                        conn.close()
-
-                        if user_record:
-                            st.session_state.logged_in = True
-                            st.session_state.username = user_record[0]
-                            st.session_state.role = user_record[1]
-                            st.success(f"¡Bienvenido, {user_input}!")
-                            st.rerun()
-                        else:
-                            st.error("Usuario o contraseña incorrectos.")
-                    else:
-                        st.error("Por favor llene todos los campos.")
-
-        with tab_signup:
-            with st.form("signup_form"):
-                new_user = st.text_input("Elige un Nombre de Usuario")
-                new_pass = st.text_input("Elige una Contraseña", type="password")
-                confirm_pass = st.text_input(
-                    "Confirma tu Contraseña", type="password"
-                )
-                signup_button = st.form_submit_button("Registrar Cuenta")
-
-                if signup_button:
-                    if not new_user or not new_pass:
-                        st.error("Todos los campos son obligatorios.")
-                    elif new_pass != confirm_pass:
-                        st.error("Las contraseñas no coinciden.")
-                    else:
-                        try:
-                            conn = sqlite3.connect(DB_PATH)
-                            c = conn.cursor()
-                            c.execute(
-                                "INSERT INTO usuarios (username, password,"
-                                " role) VALUES (?, ?, 'Usuario')",
-                                (new_user, new_pass),
-                            )
-                            conn.commit()
-                            conn.close()
-                            st.success(
-                                "¡Cuenta creada con éxito! Ya puedes iniciar"
-                                " sesión."
-                            )
-                        except sqlite3.IntegrityError:
-                            st.error("El nombre de usuario ya existe.")
-    st.stop()
-
-# ==========================================
-# 3. BARRA LATERAL DE NAVEGACIÓN
-# ==========================================
-with st.sidebar:
-    st.markdown(
-        f"### 👤 Sesión Activa\nConectado como:"
-        f" **{st.session_state.username}**\nRol: `{st.session_state.role}`"
-    )
-    st.markdown("---")
-    st.markdown("### 🎛️ Menú del Panel")
-    menu_option = st.radio(
-        "Seleccione una sección:",
-        [
-            "📊 Vista General",
-            "⚙️ Configuración de Células",
-            "👤 Ingreso de Nuevos Miembros",
-            "📄 Reportes de Células",
-            "📉 Seguimiento de Almas",
-            "📅 Agenda y Calendario",
-        ],
-    )
-    st.markdown("---")
-    if st.button("🚪 Cerrar Sesión", use_container_width=True):
-        st.session_state.logged_in = False
-        st.session_state.username = ""
-        st.session_state.role = "Usuario"
-        st.rerun()
-
-# Carga global rápida de opciones de células
-opciones_celulas_global = ["Ninguna"]
-try:
-    conn = sqlite3.connect(DB_PATH)
-    cells_df = pd.read_sql_query(
-        "SELECT cell_name FROM cells ORDER BY cell_name ASC", conn
-    )
-    conn.close()
-    if not cells_df.empty:
-        opciones_celulas_global += cells_df["cell_name"].tolist()
-except Exception:
-    pass
-
-# ==========================================
-# 4. LÓGICA DE LAS SECCIONES DEL PANEL
-# ==========================================
-if menu_option == "📊 Vista General":
-    st.title("📊 Panel de Control y Estadísticas")
-    st.write(
-        "Resumen ejecutivo del estado actual de los ministerios y cumplimiento"
-        " de metas."
-    )
-
-    conn = sqlite3.connect(DB_PATH)
-    tot_cells = len(pd.read_sql_query("SELECT id FROM cells", conn))
-    tot_members = len(pd.read_sql_query("SELECT id FROM members", conn))
-    tot_reports = len(pd.read_sql_query("SELECT id FROM cell_reports", conn))
-
-    try:
-        tot_backsliders = len(
-            pd.read_sql_query(
-                "SELECT id FROM backsliders WHERE status != 'Reconciliado /"
-                " Restaurado'",
-                conn,
-            )
-        )
-    except Exception:
-        tot_backsliders = 0
-
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric(label="🏠 Células Activas", value=tot_cells)
-    kpi2.metric(label="👥 Miembros Registrados", value=tot_members)
-    kpi3.metric(label="📄 Reportes Entregados", value=tot_reports)
-    kpi4.metric(label="⚠️ Casos en Seguimiento", value=tot_backsliders)
-
-    st.markdown("---")
-    st.subheader("📈 Monitoreo de Metas Anuales por Célula")
-
-    query_metas = """
-    SELECT 
-        c.cell_name as 'Célula', 
-        c.yearly_target as 'Meta de Nuevos Miembros', 
-        COUNT(m.id) as 'Miembros Registrados Actuales' 
-    FROM cells c 
-    LEFT JOIN members m ON c.cell_name = m.assigned_cell 
-    GROUP BY c.cell_name
-    """
-
-    try:
-        df_metas = pd.read_sql_query(query_metas, conn)
-        conn.close()
-
-        if not df_metas.empty:
-            df_metas["% Cumplimiento"] = (
-                (
-                    df_metas["Miembros Registrados Actuales"]
-                    / df_metas["Meta de Nuevos Miembros"]
-                )
-                * 100
-            ).round(1)
-
-            st.dataframe(df_metas, use_container_width=True)
-            st.bar_chart(
-                df_metas.set_index("Célula")[
-                    ["Meta de Nuevos Miembros", "Miembros Registrados Actuales"]
-                ]
-            )
+        st.write("💰 **Ofrendas Totales por Célula**")
+        if not df_cell.empty:
+            ofrendas_por_celula = df_cell.groupby('cell_name')['offering'].sum().reset_index()
+            st.bar_chart(data=ofrendas_por_celula, x='cell_name', y='offering')
         else:
-            st.info("No hay datos suficientes para mostrar metas de células.")
-    except Exception as e:
-        st.error(f"Error al cargar las metas: {e}")
+            st.info("Agrega reportes de células para visualizar métricas financieras.")
 
-else:
-    st.info(f"Sección en construcción: {menu_option}")
+    st.markdown("---")
+
+    # --- 3. VISTA Y DESCARGA DE DATOS ---
+    st.markdown("### 📥 Tablas de Datos y Exportación")
+    
+    sub_tab1, sub_tab2, sub_tab3 = st.tabs(["📋 Reportes de Células", "🌱 Nuevos Convertidos", "👥 Miembros"])
+
+    with sub_tab1:
+        st.dataframe(df_cell, use_container_width=True)
+        if not df_cell.empty:
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_cell.to_excel(writer, index=False, sheet_name='Celulas')
+            st.download_button(
+                label="📥 Descargar Reportes de Células (Excel)",
+                data=output.getvalue(),
+                file_name="reportes_celulas.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    with sub_tab2:
+        st.dataframe(df_converts, use_container_width=True)
+        if not df_converts.empty:
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_converts.to_excel(writer, index=False, sheet_name='Convertidos')
+            st.download_button(
+                label="📥 Descargar Nuevos Convertidos (Excel)",
+                data=output.getvalue(),
+                file_name="nuevos_convertidos.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+    with sub_tab3:
+        st.dataframe(df_members, use_container_width=True)
+        if not df_members.empty:
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_members.to_excel(writer, index=False, sheet_name='Miembros')
+            st.download_button(
+                label="📥 Descargar Miembros (Excel)",
+                data=output.getvalue(),
+                file_name="miembros.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
