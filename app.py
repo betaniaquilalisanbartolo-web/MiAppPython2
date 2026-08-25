@@ -267,6 +267,44 @@ else:
                 conn.close()
                 st.success("Reporte de célula guardado exitosamente.")
 
+    # --- Pestaña de Descarrilados ---
+with tab_descarrilados:
+    st.subheader("Registro y Seguimiento de Personas Apartadas / Descarrilados")
+    
+    # Obtenemos las células activas para asignarle la persona a una célula responsable
+    conn = sqlite3.connect(DB_PATH)
+    cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+    conn.close()
+    cell_options = cells_df['cell_name'].tolist() if not cells_df.empty else []
+
+    with st.form("registro_descarrilado"):
+        person_name = st.text_input("Nombre Completo de la Persona")
+        assigned_cell = st.selectbox("Célula Responsable del Seguimiento", cell_options)
+        last_attendance = st.date_input("Fecha aproximada de última asistencia")
+        reason = st.text_area("Motivo del alejamiento (si se conoce)")
+        action_plan = st.text_input("Acción a tomar (Ej: Visita, llamada, oración)")
+        current_status = st.selectbox("Estado actual", ["Apartado", "En contacto", "Visitado", "Reconciliado"])
+        
+        submit_backslider = st.form_submit_button("Guardar Registro de Seguimiento")
+        
+        if submit_backslider:
+            if person_name:
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                # Esta consulta asume que creaste una tabla llamada 'backsliders'
+                c.execute("""
+                    INSERT INTO backsliders 
+                    (person_name, cell_name, last_attendance, reason, action_plan, status) 
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (person_name, assigned_cell, last_attendance.strftime("%Y-%m-%d"), reason, action_plan, current_status))
+                conn.commit()
+                conn.close()
+                st.success(f"Registro de {person_name} guardado correctamente.")
+            else:
+                st.error("El nombre de la persona es obligatorio.")
+
+    
+
     # --- Panel / Dashboard Mejorado ---
     with tab6:
         st.header("📊 Panel de Control y Análisis")
