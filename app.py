@@ -73,7 +73,7 @@ if "logged_in" not in st.session_state:
 
 # Formulario de inicio de sesión (Login)
 if not st.session_state.logged_in:
-    st.markdown("<h2 style='text-align: center;'>🔐 Control de Acceso</h2>", unsafe_index=True, unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>🔐 Control de Acceso</h2>", unsafe_allow_html=True)
     
     # Contenedor centrado para el login
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -84,14 +84,13 @@ if not st.session_state.logged_in:
             login_button = st.form_submit_button("Ingresar al Panel")
             
             if login_button:
-                # Modifica aquí las credenciales que desees por defecto
                 if username == "admin" and password == "admin123":
                     st.session_state.logged_in = True
                     st.success("¡Acceso concedido!")
                     st.rerun()
                 else:
                     st.error("Usuario o contraseña incorrectos.")
-    st.stop() # Detiene la ejecución aquí si no ha iniciado sesión
+    st.stop()
 
 # ==========================================
 # 3. INTERFAZ PRINCIPAL DEL PANEL DE CONTROL
@@ -122,10 +121,10 @@ if menu_option == "📊 Vista General":
     st.write("Resumen ejecutivo del estado de las células de la iglesia.")
     
     conn = sqlite3.connect(DB_PATH)
-    # Consultas rápidas para indicadores (Kpis)
-    tot_cells = pd.read_sql_query("SELECT COUNT(*) as total FROM cells", conn)['total'][0]
-    tot_reports = pd.read_sql_query("SELECT COUNT(*) as total FROM cell_reports", conn)['total'][0]
-    tot_backsliders = pd.read_sql_query("SELECT COUNT(*) as total FROM backsliders WHERE status != 'Reconciliado'", conn)['total'][0]
+    # Consultas rápidas para indicadores (KPIs)
+    tot_cells = pd.read_sql_query("SELECT COUNT(*) as total FROM cells", conn)['total'].iloc[0]
+    tot_reports = pd.read_sql_query("SELECT COUNT(*) as total FROM cell_reports", conn)['total'].iloc[0]
+    tot_backsliders = pd.read_sql_query("SELECT COUNT(*) as total FROM backsliders WHERE status != 'Reconciliado'", conn)['total'].iloc[0]
     conn.close()
     
     # Tarjetas informativas superiores
@@ -196,10 +195,11 @@ elif menu_option == "📝 Reportes de Células":
             if cell_name:
                 conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
-                c.execute("""INSERT INTO cell_reports 
+                c.execute("""
+                    INSERT INTO cell_reports 
                     (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
                 conn.commit()
                 conn.close()
                 st.success("Reporte de célula guardado exitosamente.")
@@ -237,9 +237,10 @@ elif menu_option == "👣 Seguimiento de Descarrilados":
                     INSERT INTO backsliders 
                     (person_name, cell_name, last_attendance, reason, action_plan, status) 
                     VALUES (?, ?, ?, ?, ?, ?)
-
-
-                         
+                """, (person_name, assigned_cell, last_attendance.strftime("%Y-%m-%d"), reason, action_plan, current_status))
+                conn.commit()
+                conn.close()
+                
 
     # --- Panel / Dashboard Mejorado ---
     with tab6:
