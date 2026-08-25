@@ -41,6 +41,28 @@ def init_db():
         )
     """)
     
+    # Tabla de Nuevos Miembros (CAMPOS EXPANDIDOS)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name TEXT NOT NULL,
+            phone TEXT,
+            email TEXT,
+            address TEXT,
+            birth_date TEXT,
+            gender TEXT,
+            marital_status TEXT,
+            cell_assigned TEXT,
+            conversion_date TEXT,
+            baptized TEXT,
+            baptism_date TEXT,
+            membership_status TEXT,
+            emergency_contact TEXT,
+            emergency_phone TEXT,
+            prayer_requests TEXT
+        )
+    """)
+    
     # Tabla de Reportes de Células
     c.execute("""
         CREATE TABLE IF NOT EXISTS cell_reports (
@@ -62,16 +84,21 @@ def init_db():
         )
     """)
     
-    # Tabla de Descarrilados / Seguimiento
+    # Tabla de Descarrilados / Seguimiento (CAMPOS EXPANDIDOS)
     c.execute("""
         CREATE TABLE IF NOT EXISTS backsliders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             person_name TEXT NOT NULL,
+            phone TEXT,
             cell_name TEXT,
             last_attendance TEXT,
+            risk_level TEXT,
             reason TEXT,
+            assigned_visitor TEXT,
             action_plan TEXT,
-            status TEXT
+            visit_date TEXT,
+            status TEXT,
+            observations TEXT
         )
     """)
     conn.commit()
@@ -88,16 +115,13 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# Interfaz de Entrada (Si no ha iniciado sesión)
 if not st.session_state.logged_in:
     st.markdown("<h2 style='text-align: center;'>🔐 Acceso al Sistema</h2>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns()
     with col2:
-        # Pestañas para alternar entre Iniciar Sesión y Crear Cuenta
         tab_login, tab_signup = st.tabs(["🔑 Iniciar Sesión", "📝 Crear una Cuenta"])
         
-        # Sub-pestaña: Iniciar Sesión
         with tab_login:
             with st.form("login_form"):
                 user_input = st.text_input("Usuario", key="login_user")
@@ -122,7 +146,6 @@ if not st.session_state.logged_in:
                     else:
                         st.error("Por favor rellene todos los campos.")
                         
-        # Sub-pestaña: Crear Cuenta
         with tab_signup:
             with st.form("signup_form"):
                 new_user = st.text_input("Elige un Nombre de Usuario")
@@ -145,22 +168,27 @@ if not st.session_state.logged_in:
                             st.success("¡Cuenta creada exitosamente! Ya puedes iniciar sesión en la pestaña superior.")
                         except sqlite3.IntegrityError:
                             st.error("El nombre de usuario ya existe. Elige otro.")
-    st.stop() # Bloquea el resto del panel si no está autenticado
+    st.stop()
 
 # ==========================================
 # 3. INTERFAZ PRINCIPAL DEL PANEL DE CONTROL
 # ==========================================
 
-# Barra lateral (Sidebar) con información de usuario y navegación
 with st.sidebar:
     st.markdown("### 👤 Sesión Activa")
     st.write(f"Conectado como: **{st.session_state.username}**")
     
     st.markdown("---")
     st.markdown("### 🧭 Navegación")
-    menu_option = st.radio(
+    menu_option = st.sidebar.radio(
         "Seleccione una sección:",
-        ["📊 Vista General", "⚙️ Administración", "📝 Reportes de Células", "👣 Seguimiento de Descarrilados"]
+        [
+            "📊 Vista General", 
+            "⚙️ Configuración de Células", 
+            "👥 Ingreso de Nuevos Miembros",
+            "📝 Reportes de Células", 
+            "👣 Seguimiento de Descarrilados"
+        ]
     )
     
     st.markdown("---")
@@ -168,6 +196,12 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
+
+# Cargar el listado de células reutilizable en los formularios
+conn = sqlite3.connect(DB_PATH)
+cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+conn.close()
+cell_options = cells_df['cell_name'].tolist() if not cells_df.empty else []
 
 # ------------------------------------------
 # SECCIÓN: VISTA GENERAL (DASHBOARD)
@@ -177,31 +211,31 @@ if menu_option == "📊 Vista General":
     st.write("Resumen ejecutivo del estado de las células de la iglesia.")
     
     conn = sqlite3.connect(DB_PATH)
-    # Consultas rápidas para indicadores (KPIs)
     tot_cells = pd.read_sql_query("SELECT COUNT(*) as total FROM cells", conn)['total'].iloc[0]
+    tot_members = pd.read_sql_query("SELECT COUNT(*) as total FROM members", conn)['total'].iloc[0]
     tot_reports = pd.read_sql_query("SELECT COUNT(*) as total FROM cell_reports", conn)['total'].iloc[0]
     tot_backsliders = pd.read_sql_query("SELECT COUNT(*) as total FROM backsliders WHERE status != 'Reconciliado'", conn)['total'].iloc[0]
     conn.close()
     
-    # Tarjetas informativas superiores
-    kpi1, kpi2, kpi3 = st.columns(3)
-    kpi1.metric(label="🏠 Células Registradas", value=int(tot_cells))
-    kpi2.metric(label="📋 Reportes Recibidos", value=int(tot_reports))
-    kpi3.metric(label="👣 Casos en Seguimiento (Apartados)", value=int(tot_backsliders))
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    kpi1.metric(label="🏠 Células Activas", value=int(tot_cells))
+    kpi2.metric(label="👥 Miembros Activos", value=int(tot_members))
+    kpi3.metric(label="📋 Reportes Entregados", value=int(tot_reports))
+    kpi4.metric(label="👣 Casos Descarrilados", value=int(tot_backsliders))
 
 # ------------------------------------------
-# SECCIÓN: ADMINISTRACIÓN
+# SECCIÓN: CONFIGURACIÓN DE CÉLULAS
 # ------------------------------------------
-elif menu_option == "⚙️ Administración":
-    st.title("⚙️ Administración del Sistema")
-    st.subheader("Registro de Nuevas Células y Líderes")
+elif menu_option == "⚙️ Configuración de Células":
+    st.title("⚙️ Configuración y Estructura")
+    st.subheader("Registro de Nombre de la Célula y el Líder")
     
     with st.form("registro_celula"):
         new_cell_name = st.text_input("Nombre de la Célula")
         cell_leader = st.text_input("Nombre del Líder")
-        cell_sector = st.text_input("Sector / Zona")
+        cell_sector = st.text_input("Sector / Zona de Reunión")
         
-        submit_cell = st.form_submit_button("Registrar Célula")
+        submit_cell = st.form_submit_button("Registrar Nueva Célula")
         
         if submit_cell:
             if new_cell_name and cell_leader:
@@ -213,36 +247,16 @@ elif menu_option == "⚙️ Administración":
                 """, (new_cell_name, cell_leader, cell_sector))
                 conn.commit()
                 conn.close()
-                st.success(f"Célula '{new_cell_name}' registrada con éxito.")
+                st.success(f"Célula '{new_cell_name}' guardada correctamente.")
                 st.rerun()
             else:
                 st.error("Por favor, rellene los campos obligatorios: Nombre de Célula y Líder.")
 
 # ------------------------------------------
-# SECCIÓN: REGISTRO DE REPORTES
+# SECCIÓN: INGRESO DE NUEVOS MIEMBROS (COMPLETAMENTE EXPANDIDO)
 # ------------------------------------------
-elif menu_option == "📝 Reportes de Células":
-    st.title("📝 Reportes de Actividad")
-    st.subheader("Formulario de Reportes de Células")
-    
-    conn = sqlite3.connect(DB_PATH)
-    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-    conn.close()
-    cell_options = cells['cell_name'].tolist() if not cells.empty else []
-    
-    with st.form("registro_reporte"):
-        cell_name = st.selectbox("Célula", cell_options)
-        meeting_date = st.date_input("Fecha de reunión")
-        adults = st.number_input("Adultos", min_value=0, step=1)
-        youth = st.number_input("Jóvenes", min_value=0, step=1)
-        children = st.number_input("Niños", min_value=0, step=1)
-        friends = st.number_input("Amigos", min_value=0, step=1)
-        visits = st.number_input("Visitas", min_value=0, step=1)
-        house_leader = st.text_input("Líder de casa")
-        biblical_theme = st.text_input("Tema bíblico")
-        central_text = st.text_input("Texto central")
-        offering = st.number_input("Ofrenda", min_value=0.0, step=0.01)
-                
+elif menu_option == "👥 Ingreso de Nuevos Miembros":
+
 
     # --- Panel / Dashboard Mejorado ---
     with tab6:
