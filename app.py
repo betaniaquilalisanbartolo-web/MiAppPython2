@@ -25,10 +25,10 @@ def init_db():
     )""")
     
     c.execute("SELECT COUNT(*) FROM usuarios")
-    if c.fetchone()[0] == 0:
+    if c.fetchone() == 0:
         c.execute("INSERT INTO usuarios (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "Administrador"))
     
-    # Tabla de Células
+    # Tabla de Células (Administración)
     c.execute("""
     CREATE TABLE IF NOT EXISTS cells (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,6 +103,7 @@ try:
 except Exception as e:
     st.error(f"Error al inicializar Base de Datos: {e}")
 
+# Función para codificación segura de descargas
 def to_csv(df):
     return df.to_csv(index=False).encode('utf-8-sig')
 
@@ -176,9 +177,16 @@ with st.sidebar:
     st.markdown(f"### 👤 Sesión Activa\nConectado como: **{st.session_state.username}**")
     st.markdown("---")
     st.markdown("### 🎛️ Menú del Panel")
+    
     menu_option = st.radio(
         "Seleccione una sección:",
-        ["📊 Vista General", "⚙️ Configuración de Células", "👤 Ingreso de Nuevos Miembros", "📝 Reportes de Células", "📉 Seguimiento de Almas"]
+        [
+            "📊 Vista General", 
+            "⚙️ Configuración de Células", 
+            "👤 Ingreso de Nuevos Miembros", 
+            "📝 Reportes de Células", 
+            "📉 Seguimiento de Almas"
+        ]
     )
     st.markdown("---")
     if st.button("🚪 Cerrar Sesión", use_container_width=True):
@@ -186,24 +194,14 @@ with st.sidebar:
         st.session_state.username = ""
         st.rerun()
 
-# Carga dinámica de células
-cell_options = []
-try:
-    conn = sqlite3.connect(DB_PATH)
-    cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-    conn.close()
-    if not cells_df.empty:
-        cell_options = cells_df["cell_name"].tolist()
-except Exception:
-    pass
-
 # ==========================================
 # 4. LÍGICA DE LAS SECCIONES DEL PANEL
 # ==========================================
 
-# A. VISTA GENERAL
+# A. VISTA GENERAL (ESTADÍSTICAS)
 if menu_option == "📊 Vista General":
     st.title("📊 Panel de Control y Estadísticas")
+    st.write("Resumen ejecutivo del estado actual de los ministerios y células.")
     
     conn = sqlite3.connect(DB_PATH)
     tot_cells = len(pd.read_sql_query("SELECT id FROM cells", conn))
@@ -248,18 +246,18 @@ elif menu_option == "⚙️ Configuración de Células":
                 conn.close()
             else:
                 st.error("Por favor rellene los campos obligatorios (*).")
+                
+    st.markdown("---")
+    st.subheader("📋 Células Registradas")
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        df_celulas = pd.read_sql_query("SELECT id as 'ID', cell_name as 'Célula', leader_name as 'Líder', sector as 'Sector/Zona' FROM cells ORDER BY cell_name ASC", conn)
+        conn.close()
+        if not df_celulas.empty:
+            st.dataframe(df_celulas, use_container_width=True)
+        else:
+            st.info("No hay células registradas todavía.")
+    except Exception as e:
+        st.error(f"Error al cargar células: {e}")
 
-# C. INGRESO DE NUEVOS MIEMBROS
-elif menu_option == "👤 Ingreso de Nuevos Miembros":
-    st.title("👤 Registro de Nuevos Miembros")
-    
-    with st.form("registro_miembro"):
-        f_name = st.text_input("Nombre Completo *")
-        phone = st.text_input("Teléfono")
-        email = st.text_input("Correo Electrónico")
-        address = st.text_area("Dirección de Habitación")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            b_date = st.date_input("Fecha de Nacimiento", min_value=datetime(1930,1,1)).strftime('%Y-%m-%d')
-            gender = st.selectbox("Género", ["Masculino", "Femenino", "Otro"])
+# C. INGRESO DE NUEVOS MIEMBROS (SINCRONIZACIÓN AUTOMÁTICA EN TIEMPO REAL)
