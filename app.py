@@ -27,7 +27,7 @@ def init_db():
     """)
     
     c.execute("SELECT COUNT(*) FROM users")
-    if c.fetchone()[0] == 0:
+    if c.fetchone() == 0:
         c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "Administrador"))
     
     # Tabla de Células (Administración)
@@ -180,6 +180,7 @@ with st.sidebar:
     st.write(f"Conectado como: **{st.session_state.username}**")
     st.markdown("---")
     st.markdown("### 🧭 Menú del Panel")
+    
     menu_option = st.radio(
         "Seleccione una sección:",
         [
@@ -203,7 +204,7 @@ conn.close()
 cell_options = cells_df['cell_name'].tolist() if not cells_df.empty else []
 
 # ==========================================
-# 4. LÓGICA DE LAS SECCIONES DEL PANEL
+# 4. LÓGICA DE LAS SECCIONES DEL PANEL (CORREGIDO)
 # ==========================================
 
 # ------------------------------------------
@@ -214,10 +215,10 @@ if menu_option == "📊 Vista General":
     st.write("Resumen ejecutivo del estado actual de los ministerios y células.")
     
     conn = sqlite3.connect(DB_PATH)
-    tot_cells = pd.read_sql_query("SELECT COUNT(*) as total FROM cells", conn)['total'].iloc[0]
-    tot_members = pd.read_sql_query("SELECT COUNT(*) as total FROM members", conn)['total'].iloc[0]
-    tot_reports = pd.read_sql_query("SELECT COUNT(*) as total FROM cell_reports", conn)['total'].iloc[0]
-    tot_backsliders = pd.read_sql_query("SELECT COUNT(*) as total FROM backsliders WHERE status != 'Reconciliado con el Señor'", conn)['total'].iloc[0]
+    tot_cells = pd.read_sql_query("SELECT * FROM cells", conn).shape[0]
+    tot_members = pd.read_sql_query("SELECT * FROM members", conn).shape[0]
+    tot_reports = pd.read_sql_query("SELECT * FROM cell_reports", conn).shape[0]
+    tot_backsliders = pd.read_sql_query("SELECT * FROM backsliders WHERE status != 'Reconciliado con el Señor'", conn).shape[0]
     conn.close()
     
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
@@ -255,3 +256,5 @@ elif menu_option == "⚙️ Configuración de Células":
                 st.error("Por favor, rellene los campos obligatorios (*).")
 
     st.markdown("---")
+    st.subheader("📋 Lista de Células dadas de Alta")
+    conn = sqlite3.connect(DB_PATH)
