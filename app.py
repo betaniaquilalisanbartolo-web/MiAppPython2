@@ -109,7 +109,7 @@ def to_csv(df):
 # ==========================================
 # 2. CONTROL DE ACCESO (LOGIN / REGISTRO)
 # ==========================================
-if "logged_in" not def in st.session_state:
+if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
