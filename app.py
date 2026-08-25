@@ -27,7 +27,7 @@ def init_db():
     """)
     
     c.execute("SELECT COUNT(*) FROM users")
-    if c.fetchone()[0] == 0:
+    if c.fetchone() == 0:
         c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "Administrador"))
     
     # Tabla de Células (Administración)
@@ -224,11 +224,15 @@ if menu_option == "📊 Vista General":
     st.write("Resumen ejecutivo del estado actual de los ministerios y células.")
     
     conn = sqlite3.connect(DB_PATH)
-    # CORREGIDO: Conteo robusto de filas usando len() sobre la lectura para evitar fallos de Pandas
     tot_cells = len(pd.read_sql_query("SELECT id FROM cells", conn))
     tot_members = len(pd.read_sql_query("SELECT id FROM members", conn))
     tot_reports = len(pd.read_sql_query("SELECT id FROM cell_reports", conn))
-    tot_backsliders = len(pd.read_sql_query("SELECT id FROM backsliders WHERE status != 'Reconciliado con el Señor'", conn))
+    
+    # Conteo seguro de casos activos
+    try:
+        tot_backsliders = len(pd.read_sql_query("SELECT id FROM backsliders WHERE status != 'Reconciliado con el Señor'", conn))
+    except Exception:
+        tot_backsliders = 0
     conn.close()
     
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
