@@ -6,7 +6,6 @@ from datetime import datetime
 # Configuración de la página
 st.set_page_config(page_title="Panel de Control - Gestión de Células", layout="wide")
 
-# Archivo de la base de datos
 DB_PATH = "celulas.db"
 
 # ==========================================
@@ -18,113 +17,107 @@ def init_db():
     
     # Tabla de Usuarios (Credenciales)
     c.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT DEFAULT 'Usuario'
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role TEXT DEFAULT 'Usuario'
+    )""")
     
-    c.execute("SELECT COUNT(*) FROM users")
+    c.execute("SELECT COUNT(*) FROM usuarios")
     if c.fetchone()[0] == 0:
-        c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "Administrador"))
+        c.execute("INSERT INTO usuarios (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "Administrador"))
     
-    # Tabla de Células (Administración)
+    # Tabla de Células
     c.execute("""
-        CREATE TABLE IF NOT EXISTS cells (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cell_name TEXT UNIQUE NOT NULL,
-            leader_name TEXT NOT NULL,
-            sector TEXT
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS cells (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cell_name TEXT UNIQUE NOT NULL,
+        leader_name TEXT NOT NULL,
+        sector TEXT
+    )""")
     
     # Tabla de Nuevos Miembros
     c.execute("""
-        CREATE TABLE IF NOT EXISTS members (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            full_name TEXT NOT NULL,
-            phone TEXT,
-            email TEXT,
-            address TEXT,
-            birth_date TEXT,
-            gender TEXT,
-            marital_status TEXT,
-            cell_assigned TEXT,
-            conversion_date TEXT,
-            baptized TEXT,
-            baptism_date TEXT,
-            membership_status TEXT,
-            emergency_contact TEXT,
-            emergency_phone TEXT,
-            prayer_requests TEXT
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS members (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        full_name TEXT NOT NULL,
+        phone TEXT,
+        email TEXT,
+        address TEXT,
+        birth_date TEXT,
+        gender TEXT,
+        marital_status TEXT,
+        assigned_cell TEXT,
+        conversion_date TEXT,
+        baptized TEXT,
+        baptism_date TEXT,
+        membership_status TEXT,
+        emergency_contact TEXT,
+        emergency_phone TEXT,
+        prayer_requests TEXT
+    )""")
     
     # Tabla de Reportes de Células
     c.execute("""
-        CREATE TABLE IF NOT EXISTS cell_reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cell_name TEXT,
-            meeting_date TEXT,
-            adults INTEGER,
-            youth INTEGER,
-            children INTEGER,
-            friends INTEGER,
-            visits INTEGER,
-            house_leader TEXT,
-            biblical_theme TEXT,
-            central_text TEXT,
-            offering REAL,
-            needs TEXT,
-            spiritual_level TEXT,
-            attendance_level INTEGER
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS cell_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cell_name TEXT,
+        meeting_date TEXT,
+        adults INTEGER,
+        youth INTEGER,
+        children INTEGER,
+        friends INTEGER,
+        visits INTEGER,
+        home_leader TEXT,
+        biblical_topic TEXT,
+        central_text TEXT,
+        offering REAL,
+        needs TEXT,
+        spiritual_level TEXT,
+        attendance_level INTEGER
+    )""")
     
-    # Tabla de Descarrilados
+    # Tabla de Descarrilados / Seguimiento
     c.execute("""
-        CREATE TABLE IF NOT EXISTS backsliders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            person_name TEXT NOT NULL,
-            phone TEXT,
-            cell_name TEXT,
-            last_attendance TEXT,
-            risk_level TEXT,
-            reason TEXT,
-            assigned_visitor TEXT,
-            action_plan TEXT,
-            visit_date TEXT,
-            status TEXT,
-            observations TEXT
-        )
-    """)
+    CREATE TABLE IF NOT EXISTS backsliders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        person_name TEXT NOT NULL,
+        phone TEXT,
+        cell_name TEXT,
+        last_attendance TEXT,
+        risk_level TEXT,
+        reason TEXT,
+        assigned_visitor TEXT,
+        action_plan TEXT,
+        visit_date TEXT,
+        status TEXT,
+        observations TEXT
+    )""")
+    
     conn.commit()
     conn.close()
 
-# Ejecutar inicialización de forma segura
 try:
     init_db()
 except Exception as e:
     st.error(f"Error al inicializar Base de Datos: {e}")
 
-# Función auxiliar para descargas directas compatibles con Excel sin librerías externas
 def to_csv(df):
     return df.to_csv(index=False).encode('utf-8-sig')
 
 # ==========================================
 # 2. CONTROL DE ACCESO (LOGIN / REGISTRO)
 # ==========================================
-if "logged_in" not in st.session_state:
+if "logged_in" not def in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.logged_in:
     st.markdown("<h2 style='text-align: center;'>🔐 Acceso al Sistema Ministerial</h2>", unsafe_allow_html=True)
-    
     col1, col2, col3 = st.columns(3)
+    
     with col2:
         tab_login, tab_signup = st.tabs(["🔑 Iniciar Sesión", "📝 Crear una Cuenta"])
         
@@ -138,7 +131,7 @@ if not st.session_state.logged_in:
                     if user_input and pass_input:
                         conn = sqlite3.connect(DB_PATH)
                         c = conn.cursor()
-                        c.execute("SELECT * FROM users WHERE username = ? AND password = ?", (user_input, pass_input))
+                        c.execute("SELECT * FROM usuarios WHERE username = ? AND password = ?", (user_input, pass_input))
                         user_record = c.fetchone()
                         conn.close()
                         
@@ -150,7 +143,7 @@ if not st.session_state.logged_in:
                         else:
                             st.error("Usuario o contraseña incorrectos.")
                     else:
-                        st.error("Por favor rellene todos los campos.")
+                        st.error("Por favor llene todos los campos.")
                         
         with tab_signup:
             with st.form("signup_form"):
@@ -168,32 +161,24 @@ if not st.session_state.logged_in:
                         try:
                             conn = sqlite3.connect(DB_PATH)
                             c = conn.cursor()
-                            c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (new_user, new_pass))
+                            c.execute("INSERT INTO usuarios (username, password) VALUES (?, ?)", (new_user, new_pass))
                             conn.commit()
                             conn.close()
-                            st.success("¡Cuenta creada con éxito! Ya puedes iniciar sesión en la pestaña superior.")
+                            st.success("¡Cuenta creada con éxito! Ya puedes iniciar sesión.")
                         except sqlite3.IntegrityError:
-                            st.error("El nombre de usuario ya existe. Por favor elige otro.")
+                            st.error("El nombre de usuario ya existe.")
     st.stop()
 
 # ==========================================
-# 3. BARRA LATERAL DE NAVEGACIÓN (SIDEBAR)
+# 3. BARRA LATERAL DE NAVEGACIÓN
 # ==========================================
 with st.sidebar:
-    st.markdown("### 👤 Sesión Activa")
-    st.write(f"Conectado como: **{st.session_state.username}**")
+    st.markdown(f"### 👤 Sesión Activa\nConectado como: **{st.session_state.username}**")
     st.markdown("---")
-    st.markdown("### 🧭 Menú del Panel")
-    
+    st.markdown("### 🎛️ Menú del Panel")
     menu_option = st.radio(
         "Seleccione una sección:",
-        [
-            "📊 Vista General", 
-            "⚙️ Configuración de Células", 
-            "👥 Ingreso de Nuevos Miembros",
-            "📝 Reportes de Células", 
-            "👣 Seguimiento de Descarrilados"
-        ]
+        ["📊 Vista General", "⚙️ Configuración de Células", "👤 Ingreso de Nuevos Miembros", "📝 Reportes de Células", "📉 Seguimiento de Almas"]
     )
     st.markdown("---")
     if st.button("🚪 Cerrar Sesión", use_container_width=True):
@@ -201,49 +186,42 @@ with st.sidebar:
         st.session_state.username = ""
         st.rerun()
 
-# Carga de la lista dinámica de células registradas (Previene errores si está vacía)
+# Carga dinámica de células
 cell_options = []
 try:
     conn = sqlite3.connect(DB_PATH)
     cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
     conn.close()
     if not cells_df.empty:
-        cell_options = cells_df['cell_name'].tolist()
+        cell_options = cells_df["cell_name"].tolist()
 except Exception:
     pass
 
 # ==========================================
-# 4. LÓGICA DE LAS SECCIONES DEL PANEL
+# 4. LÍGICA DE LAS SECCIONES DEL PANEL
 # ==========================================
 
-# ------------------------------------------
-# A. VISTA GENERAL (DASHBOARD)
-# ------------------------------------------
+# A. VISTA GENERAL
 if menu_option == "📊 Vista General":
     st.title("📊 Panel de Control y Estadísticas")
-    st.write("Resumen ejecutivo del estado actual de los ministerios y células.")
     
     conn = sqlite3.connect(DB_PATH)
     tot_cells = len(pd.read_sql_query("SELECT id FROM cells", conn))
     tot_members = len(pd.read_sql_query("SELECT id FROM members", conn))
     tot_reports = len(pd.read_sql_query("SELECT id FROM cell_reports", conn))
-    
-    # Conteo seguro de casos activos
     try:
-        tot_backsliders = len(pd.read_sql_query("SELECT id FROM backsliders WHERE status != 'Reconciliado con el Señor'", conn))
-    except Exception:
+        tot_backsliders = len(pd.read_sql_query("SELECT id FROM backsliders WHERE status != 'Reconciliado'", conn))
+    except:
         tot_backsliders = 0
     conn.close()
     
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
     kpi1.metric(label="🏠 Células Activas", value=tot_cells)
-    kpi2.metric(label="👥 Miembros Activos", value=tot_members)
-    kpi3.metric(label="📋 Reportes Entregados", value=tot_reports)
-    kpi4.metric(label="👣 Casos Descarrilados", value=tot_backsliders)
+    kpi2.metric(label="👥 Miembros Registrados", value=tot_members)
+    kpi3.metric(label="📄 Reportes Entregados", value=tot_reports)
+    kpi4.metric(label="⚠️ Casos en Seguimiento", value=tot_backsliders)
 
-# ------------------------------------------
-# B. CONFIGURACIÓN DE CÉLULAS (ADMINISTRACIÓN)
-# ------------------------------------------
+# B. CONFIGURACIÓN DE CÉLULAS
 elif menu_option == "⚙️ Configuración de Células":
     st.title("⚙️ Estructura y Administración")
     st.subheader("Formulario de Registro: Células y Líderes")
@@ -258,11 +236,30 @@ elif menu_option == "⚙️ Configuración de Células":
             if new_cell_name and cell_leader:
                 conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
-                
-                # Validación limpia: verificar si el nombre ya existe antes de insertar
                 c.execute("SELECT COUNT(*) FROM cells WHERE cell_name = ?", (new_cell_name,))
-                existe = c.fetchone()[0]
-                
-                if existe > 0:
+                if c.fetchone()[0] > 0:
                     st.error("Ya existe una célula registrada con ese nombre.")
-                    conn.close()
+                else:
+                    c.execute("INSERT INTO cells (cell_name, leader_name, sector) VALUES (?, ?, ?)", 
+                              (new_cell_name, cell_leader, cell_sector))
+                    conn.commit()
+                    st.success(f"Célula '{new_cell_name}' registrada exitosamente.")
+                    st.rerun()
+                conn.close()
+            else:
+                st.error("Por favor rellene los campos obligatorios (*).")
+
+# C. INGRESO DE NUEVOS MIEMBROS
+elif menu_option == "👤 Ingreso de Nuevos Miembros":
+    st.title("👤 Registro de Nuevos Miembros")
+    
+    with st.form("registro_miembro"):
+        f_name = st.text_input("Nombre Completo *")
+        phone = st.text_input("Teléfono")
+        email = st.text_input("Correo Electrónico")
+        address = st.text_area("Dirección de Habitación")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            b_date = st.date_input("Fecha de Nacimiento", min_value=datetime(1930,1,1)).strftime('%Y-%m-%d')
+            gender = st.selectbox("Género", ["Masculino", "Femenino", "Otro"])
