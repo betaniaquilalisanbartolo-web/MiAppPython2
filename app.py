@@ -41,7 +41,7 @@ def init_db():
         )
     """)
     
-    # Tabla de Nuevos Miembros (CAMPOS EXPANDIDOS)
+    # Tabla de Nuevos Miembros
     c.execute("""
         CREATE TABLE IF NOT EXISTS members (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,7 +84,7 @@ def init_db():
         )
     """)
     
-    # Tabla de Descarrilados / Seguimiento (CAMPOS EXPANDIDOS)
+    # Tabla de Descarrilados / Seguimiento
     c.execute("""
         CREATE TABLE IF NOT EXISTS backsliders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,7 +118,8 @@ if "username" not in st.session_state:
 if not st.session_state.logged_in:
     st.markdown("<h2 style='text-align: center;'>🔐 Acceso al Sistema</h2>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns()
+    # CORREGIDO: Se añade el argumento numérico 3 a st.columns()
+    col1, col2, col3 = st.columns(3)
     with col2:
         tab_login, tab_signup = st.tabs(["🔑 Iniciar Sesión", "📝 Crear una Cuenta"])
         
@@ -180,7 +181,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("### 🧭 Navegación")
-    menu_option = st.sidebar.radio(
+    menu_option = st.radio(
         "Seleccione una sección:",
         [
             "📊 Vista General", 
@@ -211,6 +212,7 @@ if menu_option == "📊 Vista General":
     st.write("Resumen ejecutivo del estado de las células de la iglesia.")
     
     conn = sqlite3.connect(DB_PATH)
+    # CORREGIDO: Uso correcto de .iloc[0] para extraer el valor escalar de los conteos
     tot_cells = pd.read_sql_query("SELECT COUNT(*) as total FROM cells", conn)['total'].iloc[0]
     tot_members = pd.read_sql_query("SELECT COUNT(*) as total FROM members", conn)['total'].iloc[0]
     tot_reports = pd.read_sql_query("SELECT COUNT(*) as total FROM cell_reports", conn)['total'].iloc[0]
@@ -253,9 +255,9 @@ elif menu_option == "⚙️ Configuración de Células":
                 st.error("Por favor, rellene los campos obligatorios: Nombre de Célula y Líder.")
 
 # ------------------------------------------
-# SECCIÓN: INGRESO DE NUEVOS MIEMBROS (COMPLETAMENTE EXPANDIDO)
+# SECCIÓN: INGRESO DE NUEVOS MIEMBROS
 # ------------------------------------------
-elif menu_option == "👥 Ingreso de Nuevos Miembros":
+
 
 
     # --- Panel / Dashboard Mejorado ---
