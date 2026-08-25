@@ -3,6 +3,9 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 
+# Configuración de la página
+st.set_page_config(page_title="Panel de Control - Gestión de Células", layout="wide")
+
 # Configuración del archivo de base de datos
 DB_PATH = "celulas.db"
 
@@ -63,20 +66,79 @@ def init_db():
 init_db()
 
 # ==========================================
-# 2. ESTRUCTURA DE PESTAÑAS EN STREAMLIT
+# 2. CONTROL DE ACCESO / CONTROL DE SESIÓN
 # ==========================================
-st.title("Sistema de Gestión de Células")
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-tab_admin, tab_reportes, tab_descarrilados = st.tabs([
-    "⚙️ Administración", 
-    "📝 Reportes de Células", 
-    "👣 Seguimiento de Descarrilados"
-])
+# Formulario de inicio de sesión (Login)
+if not st.session_state.logged_in:
+    st.markdown("<h2 style='text-align: center;'>🔐 Control de Acceso</h2>", unsafe_index=True, unsafe_allow_html=True)
+    
+    # Contenedor centrado para el login
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        with st.form("login_form"):
+            username = st.text_input("Usuario")
+            password = st.text_input("Contraseña", type="password")
+            login_button = st.form_submit_button("Ingresar al Panel")
+            
+            if login_button:
+                # Modifica aquí las credenciales que desees por defecto
+                if username == "admin" and password == "admin123":
+                    st.session_state.logged_in = True
+                    st.success("¡Acceso concedido!")
+                    st.rerun()
+                else:
+                    st.error("Usuario o contraseña incorrectos.")
+    st.stop() # Detiene la ejecución aquí si no ha iniciado sesión
 
 # ==========================================
-# PESTAÑA A: ADMINISTRACIÓN (REGISTRO CÉLULAS)
+# 3. INTERFAZ PRINCIPAL DEL PANEL DE CONTROL
 # ==========================================
-with tab_admin:
+
+# Barra lateral (Sidebar) con información de usuario y navegación
+with st.sidebar:
+    st.markdown("### 👤 Sesión Activa")
+    st.write("Conectado como: **Administrador**")
+    
+    st.markdown("---")
+    st.markdown("### 🧭 Navegación")
+    menu_option = st.radio(
+        "Seleccione una sección:",
+        ["📊 Vista General", "⚙️ Administración", "📝 Reportes de Células", "👣 Seguimiento de Descarrilados"]
+    )
+    
+    st.markdown("---")
+    if st.button("🚪 Cerrar Sesión", use_container_width=True):
+        st.session_state.logged_in = False
+        st.rerun()
+
+# ------------------------------------------
+# SECCIÓN: VISTA GENERAL (DASHBOARD)
+# ------------------------------------------
+if menu_option == "📊 Vista General":
+    st.title("📊 Panel de Control y Estadísticas")
+    st.write("Resumen ejecutivo del estado de las células de la iglesia.")
+    
+    conn = sqlite3.connect(DB_PATH)
+    # Consultas rápidas para indicadores (Kpis)
+    tot_cells = pd.read_sql_query("SELECT COUNT(*) as total FROM cells", conn)['total'][0]
+    tot_reports = pd.read_sql_query("SELECT COUNT(*) as total FROM cell_reports", conn)['total'][0]
+    tot_backsliders = pd.read_sql_query("SELECT COUNT(*) as total FROM backsliders WHERE status != 'Reconciliado'", conn)['total'][0]
+    conn.close()
+    
+    # Tarjetas informativas superiores
+    kpi1, kpi2, kpi3 = st.columns(3)
+    kpi1.metric(label="🏠 Células Registradas", value=int(tot_cells))
+    kpi2.metric(label="📋 Reportes Recibidos", value=int(tot_reports))
+    kpi3.metric(label="👣 Casos en Seguimiento (Apartados)", value=int(tot_backsliders))
+
+# ------------------------------------------
+# SECCIÓN: ADMINISTRACIÓN
+# ------------------------------------------
+elif menu_option == "⚙️ Administración":
+    st.title("⚙️ Administración del Sistema")
     st.subheader("Registro de Nuevas Células y Líderes")
     
     with st.form("registro_celula"):
@@ -96,18 +158,18 @@ with tab_admin:
                 """, (new_cell_name, cell_leader, cell_sector))
                 conn.commit()
                 conn.close()
-                st.success(f"Célula '{new_cell_name}' con líder '{cell_leader}' registrada con éxito.")
+                st.success(f"Célula '{new_cell_name}' registrada con éxito.")
                 st.rerun()
             else:
                 st.error("Por favor, rellene los campos obligatorios: Nombre de Célula y Líder.")
 
-# ==========================================
-# PESTAÑA B: REGISTRO DE REPORTES
-# ==========================================
-with tab_reportes:
-    st.subheader("Registro de Reportes de Células")
+# ------------------------------------------
+# SECCIÓN: REGISTRO DE REPORTES
+# ------------------------------------------
+elif menu_option == "📝 Reportes de Células":
+    st.title("📝 Reportes de Actividad")
+    st.subheader("Formulario de Reportes de Células")
     
-    # Consulta de células para desplegar opciones del menú
     conn = sqlite3.connect(DB_PATH)
     cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
     conn.close()
@@ -143,15 +205,15 @@ with tab_reportes:
                 st.success("Reporte de célula guardado exitosamente.")
                 st.rerun()
             else:
-                st.error("Primero debe registrar una célula en la pestaña de Administración.")
+                st.error("Primero debe registrar una célula en la sección de Administración.")
 
-# ==========================================
-# PESTAÑA C: SEGUIMIENTO DE DESCARRILADOS
-# ==========================================
-with tab_descarrilados:
+# ------------------------------------------
+# SECCIÓN: SEGUIMIENTO DE DESCARRILADOS
+# ------------------------------------------
+elif menu_option == "👣 Seguimiento de Descarrilados":
+    st.title("👣 Módulo de Consolidación")
     st.subheader("Registro y Seguimiento de Personas Apartadas / Descarrilados")
     
-    # Consulta de células para asignar responsabilidades de visitación
     conn = sqlite3.connect(DB_PATH)
     cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
     conn.close()
@@ -175,13 +237,7 @@ with tab_descarrilados:
                     INSERT INTO backsliders 
                     (person_name, cell_name, last_attendance, reason, action_plan, status) 
                     VALUES (?, ?, ?, ?, ?, ?)
-                """, (person_name, assigned_cell, last_attendance.strftime("%Y-%m-%d"), reason, action_plan, current_status))
-                conn.commit()
-                conn.close()
-                st.success(f"Registro de {person_name} guardado correctamente.")
-                st.rerun()
-            else:
-                st.error("El nombre de la persona es obligatorio.")
+
 
                          
 
