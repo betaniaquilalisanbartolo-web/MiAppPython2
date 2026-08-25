@@ -231,12 +231,4 @@ else:
             else:
                 st.info("No hay nuevos convertidos registrados en el sistema para procesar una baja.")
 
-    # --- 3. Reportes ---
-    with tab3:
-        st.subheader("Registro de Reportes de Células")
-        conn = sqlite3.connect(DB_PATH)
-        cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-        conn.close()
-        cell_options = cells['cell_name'].tolist() if not cells.empty else []
-        
-        with st.form("registro_reporte"):
+    
