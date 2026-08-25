@@ -6,7 +6,7 @@ from datetime import datetime
 # Configuración de la página
 st.set_page_config(page_title="Panel de Control - Gestión de Células", layout="wide")
 
-# Configuración del archivo de base de datos
+# Archivo local de la base de datos
 DB_PATH = "celulas.db"
 
 # ==========================================
@@ -16,7 +16,7 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
-    # Tabla de Usuarios
+    # Tabla de Usuarios (Credenciales)
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,11 +30,11 @@ def init_db():
     if c.fetchone()[0] == 0:
         c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "Administrador"))
     
-    # Tabla de Células
+    # Tabla de Células (Administración)
     c.execute("""
         CREATE TABLE IF NOT EXISTS cells (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cell_name TEXT NOT NULL,
+            cell_name TEXT UNIQUE NOT NULL,
             leader_name TEXT NOT NULL,
             sector TEXT
         )
@@ -105,7 +105,7 @@ def init_db():
 
 init_db()
 
-# Función auxiliar compatible para descargas en formato CSV (reemplazo de Excel sin dependencias)
+# Función auxiliar para descargas directas compatibles con Excel
 def to_csv(df):
     return df.to_csv(index=False).encode('utf-8-sig')
 
@@ -118,7 +118,7 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.logged_in:
-    st.markdown("<h2 style='text-align: center;'>🔐 Acceso al Sistema</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>🔐 Acceso al Sistema Ministerial</h2>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
     with col2:
@@ -167,19 +167,19 @@ if not st.session_state.logged_in:
                             c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (new_user, new_pass))
                             conn.commit()
                             conn.close()
-                            st.success("¡Cuenta creada exitosamente! Ya puedes iniciar sesión.")
+                            st.success("¡Cuenta creada con éxito! Ya puedes iniciar sesión en la pestaña superior.")
                         except sqlite3.IntegrityError:
-                            st.error("El nombre de usuario ya existe. Elige otro.")
+                            st.error("El nombre de usuario ya existe. Por favor elige otro.")
     st.stop()
 
 # ==========================================
-# 3. INTERFAZ PRINCIPAL DEL PANEL DE CONTROL
+# 3. BARRA LATERAL DE NAVEGACIÓN (SIDEBAR)
 # ==========================================
 with st.sidebar:
     st.markdown("### 👤 Sesión Activa")
     st.write(f"Conectado como: **{st.session_state.username}**")
     st.markdown("---")
-    st.markdown("### 🧭 Navegación")
+    st.markdown("### 🧭 Menú del Panel")
     menu_option = st.radio(
         "Seleccione una sección:",
         [
@@ -196,20 +196,24 @@ with st.sidebar:
         st.session_state.username = ""
         st.rerun()
 
-# Cargar opciones globales de células de forma segura
+# Carga de la lista dinámica de células registradas
 conn = sqlite3.connect(DB_PATH)
 cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
 conn.close()
 cell_options = cells_df['cell_name'].tolist() if not cells_df.empty else []
 
+# ==========================================
+# 4. LÓGICA DE LAS SECCIONES DEL PANEL
+# ==========================================
+
 # ------------------------------------------
-# SECCIÓN: VISTA GENERAL (DASHBOARD)
+# A. VISTA GENERAL (DASHBOARD)
 # ------------------------------------------
 if menu_option == "📊 Vista General":
     st.title("📊 Panel de Control y Estadísticas")
+    st.write("Resumen ejecutivo del estado actual de los ministerios y células.")
     
     conn = sqlite3.connect(DB_PATH)
-    # CORREGIDO: Uso de .iloc[0] para prevenir fallos visuales en los KPIs superiores
     tot_cells = pd.read_sql_query("SELECT COUNT(*) as total FROM cells", conn)['total'].iloc[0]
     tot_members = pd.read_sql_query("SELECT COUNT(*) as total FROM members", conn)['total'].iloc[0]
     tot_reports = pd.read_sql_query("SELECT COUNT(*) as total FROM cell_reports", conn)['total'].iloc[0]
@@ -223,35 +227,31 @@ if menu_option == "📊 Vista General":
     kpi4.metric(label="👣 Casos Descarrilados", value=int(tot_backsliders))
 
 # ------------------------------------------
-# SECCIÓN: CONFIGURACIÓN DE CÉLULAS
+# B. CONFIGURACIÓN DE CÉLULAS (ADMINISTRACIÓN)
 # ------------------------------------------
 elif menu_option == "⚙️ Configuración de Células":
-    st.title("⚙️ Configuración y Estructura")
-    st.subheader("Registro de Nombre de la Célula y el Líder")
+    st.title("⚙️ Estructura y Administración")
+    st.subheader("Formulario de Registro: Células y Líderes")
     
     with st.form("registro_celula"):
-        new_cell_name = st.text_input("Nombre de la Célula")
-        cell_leader = st.text_input("Nombre del Líder")
-        cell_sector = st.text_input("Sector / Zona de Reunión")
+        new_cell_name = st.text_input("Nombre de la Célula *")
+        cell_leader = st.text_input("Nombre del Líder Asignado *")
+        cell_sector = st.text_input("Sector / Zona Geográfica")
         submit_cell = st.form_submit_button("Registrar Nueva Célula")
         
         if submit_cell:
             if new_cell_name and cell_leader:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute("INSERT INTO cells (cell_name, leader_name, sector) VALUES (?, ?, ?)", (new_cell_name, cell_leader, cell_sector))
-                conn.commit()
-                conn.close()
-                st.success(f"Célula '{new_cell_name}' guardada correctamente.")
-                st.rerun()
+                try:
+                    conn = sqlite3.connect(DB_PATH)
+                    c = conn.cursor()
+                    c.execute("INSERT INTO cells (cell_name, leader_name, sector) VALUES (?, ?, ?)", (new_cell_name, cell_leader, cell_sector))
+                    conn.commit()
+                    conn.close()
+                    st.success(f"Célula '{new_cell_name}' guardada correctamente.")
+                    st.rerun()
+                except sqlite3.IntegrityError:
+                    st.error("Ya existe una célula registrada con ese nombre.")
             else:
-                st.error("Por favor, rellene los campos obligatorios.")
+                st.error("Por favor, rellene los campos obligatorios (*).")
 
     st.markdown("---")
-    st.subheader("📋 Células Registradas Actuales")
-    conn = sqlite3.connect(DB_PATH)
-    all_cells = pd.read_sql_query("SELECT cell_name as 'Nombre Célula', leader_name as 'Líder', sector as 'Sector' FROM cells", conn)
-    conn.close()
-    
-    if not all_cells.empty:
-        st.dataframe(all_cells, use_container_width=True)
