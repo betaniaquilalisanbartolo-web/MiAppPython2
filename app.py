@@ -27,7 +27,7 @@ def init_db():
     """)
     
     c.execute("SELECT COUNT(*) FROM users")
-    if c.fetchone() == 0:
+    if c.fetchone()[0] == 0:
         c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "Administrador"))
     
     # Tabla de Células (Administración)
@@ -256,12 +256,13 @@ elif menu_option == "⚙️ Configuración de Células":
         
         if submit_cell:
             if new_cell_name and cell_leader:
-                try:
-                    conn = sqlite3.connect(DB_PATH)
-                    c = conn.cursor()
-                    c.execute("INSERT INTO cells (cell_name, leader_name, sector) VALUES (?, ?, ?)", (new_cell_name, cell_leader, cell_sector))
-                    conn.commit()
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                
+                # Validación limpia: verificar si el nombre ya existe antes de insertar
+                c.execute("SELECT COUNT(*) FROM cells WHERE cell_name = ?", (new_cell_name,))
+                existe = c.fetchone()[0]
+                
+                if existe > 0:
+                    st.error("Ya existe una célula registrada con ese nombre.")
                     conn.close()
-                    st.success(f"Célula '{new_cell_name}' guardada correctamente.")
-                    st.rerun()
-                except sqlite3.IntegrityError:
