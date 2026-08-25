@@ -1,3 +1,4 @@
+
 import streamlit as st
 import sqlite3
 import pandas as pd
@@ -118,7 +119,6 @@ if "username" not in st.session_state:
 if not st.session_state.logged_in:
     st.markdown("<h2 style='text-align: center;'>🔐 Acceso al Sistema</h2>", unsafe_allow_html=True)
     
-    # CORREGIDO: Se añade el argumento numérico 3 a st.columns()
     col1, col2, col3 = st.columns(3)
     with col2:
         tab_login, tab_signup = st.tabs(["🔑 Iniciar Sesión", "📝 Crear una Cuenta"])
@@ -198,7 +198,7 @@ with st.sidebar:
         st.session_state.username = ""
         st.rerun()
 
-# Cargar el listado de células reutilizable en los formularios
+# Cargar el listado de células dinámicas para los menús desplegables
 conn = sqlite3.connect(DB_PATH)
 cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
 conn.close()
@@ -212,11 +212,10 @@ if menu_option == "📊 Vista General":
     st.write("Resumen ejecutivo del estado de las células de la iglesia.")
     
     conn = sqlite3.connect(DB_PATH)
-    # CORREGIDO: Uso correcto de .iloc[0] para extraer el valor escalar de los conteos
     tot_cells = pd.read_sql_query("SELECT COUNT(*) as total FROM cells", conn)['total'].iloc[0]
     tot_members = pd.read_sql_query("SELECT COUNT(*) as total FROM members", conn)['total'].iloc[0]
     tot_reports = pd.read_sql_query("SELECT COUNT(*) as total FROM cell_reports", conn)['total'].iloc[0]
-    tot_backsliders = pd.read_sql_query("SELECT COUNT(*) as total FROM backsliders WHERE status != 'Reconciliado'", conn)['total'].iloc[0]
+    tot_backsliders = pd.read_sql_query("SELECT COUNT(*) as total FROM backsliders WHERE status != 'Reconciliado con el Señor'", conn)['total'].iloc[0]
     conn.close()
     
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
@@ -255,8 +254,10 @@ elif menu_option == "⚙️ Configuración de Células":
                 st.error("Por favor, rellene los campos obligatorios: Nombre de Célula y Líder.")
 
 # ------------------------------------------
-# SECCIÓN: INGRESO DE NUEVOS MIEMBROS
+# SECCIÓN: INGRESO DE NUEVOS MIEMBROS (CORREGIDO SIN TABS EXTENSIONES)
 # ------------------------------------------
+elif menu_option == "👥 Ingreso de Nuevos Miembros":
+    st.title("👥 Miembros del Ministerio")
 
 
 
