@@ -16,6 +16,21 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
+    # Tabla de Usuarios (Credenciales de acceso)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT DEFAULT 'Usuario'
+        )
+    """)
+    
+    # Insertar un usuario administrador por defecto si la tabla está vacía
+    c.execute("SELECT COUNT(*) FROM users")
+    if c.fetchone()[0] == 0:
+        c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "Administrador"))
+    
     # Tabla de Células (Administración)
     c.execute("""
         CREATE TABLE IF NOT EXISTS cells (
@@ -66,31 +81,71 @@ def init_db():
 init_db()
 
 # ==========================================
-# 2. CONTROL DE ACCESO / CONTROL DE SESIÓN
+# 2. CONTROL DE ACCESO (LOGIN / REGISTRO)
 # ==========================================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
-# Formulario de inicio de sesión (Login)
+# Interfaz de Entrada (Si no ha iniciado sesión)
 if not st.session_state.logged_in:
-    st.markdown("<h2 style='text-align: center;'>🔐 Control de Acceso</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>🔐 Acceso al Sistema</h2>", unsafe_allow_html=True)
     
-    # Contenedor centrado para el login
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        with st.form("login_form"):
-            username = st.text_input("Usuario")
-            password = st.text_input("Contraseña", type="password")
-            login_button = st.form_submit_button("Ingresar al Panel")
-            
-            if login_button:
-                if username == "admin" and password == "admin123":
-                    st.session_state.logged_in = True
-                    st.success("¡Acceso concedido!")
-                    st.rerun()
-                else:
-                    st.error("Usuario o contraseña incorrectos.")
-    st.stop()
+        # Pestañas para alternar entre Iniciar Sesión y Crear Cuenta
+        tab_login, tab_signup = st.tabs(["🔑 Iniciar Sesión", "📝 Crear una Cuenta"])
+        
+        # Sub-pestaña: Iniciar Sesión
+        with tab_login:
+            with st.form("login_form"):
+                user_input = st.text_input("Usuario", key="login_user")
+                pass_input = st.text_input("Contraseña", type="password", key="login_pass")
+                login_button = st.form_submit_button("Ingresar al Panel")
+                
+                if login_button:
+                    if user_input and pass_input:
+                        conn = sqlite3.connect(DB_PATH)
+                        c = conn.cursor()
+                        c.execute("SELECT * FROM users WHERE username = ? AND password = ?", (user_input, pass_input))
+                        user_record = c.fetchone()
+                        conn.close()
+                        
+                        if user_record:
+                            st.session_state.logged_in = True
+                            st.session_state.username = user_input
+                            st.success(f"¡Bienvenido, {user_input}!")
+                            st.rerun()
+                        else:
+                            st.error("Usuario o contraseña incorrectos.")
+                    else:
+                        st.error("Por favor rellene todos los campos.")
+                        
+        # Sub-pestaña: Crear Cuenta
+        with tab_signup:
+            with st.form("signup_form"):
+                new_user = st.text_input("Elige un Nombre de Usuario")
+                new_pass = st.text_input("Elige una Contraseña", type="password")
+                confirm_pass = st.text_input("Confirma tu Contraseña", type="password")
+                signup_button = st.form_submit_button("Registrar Cuenta")
+                
+                if signup_button:
+                    if not new_user or not new_pass:
+                        st.error("Todos los campos son obligatorios.")
+                    elif new_pass != confirm_pass:
+                        st.error("Las contraseñas no coinciden.")
+                    else:
+                        try:
+                            conn = sqlite3.connect(DB_PATH)
+                            c = conn.cursor()
+                            c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (new_user, new_pass))
+                            conn.commit()
+                            conn.close()
+                            st.success("¡Cuenta creada exitosamente! Ya puedes iniciar sesión en la pestaña superior.")
+                        except sqlite3.IntegrityError:
+                            st.error("El nombre de usuario ya existe. Elige otro.")
+    st.stop() # Bloquea el resto del panel si no está autenticado
 
 # ==========================================
 # 3. INTERFAZ PRINCIPAL DEL PANEL DE CONTROL
@@ -99,7 +154,7 @@ if not st.session_state.logged_in:
 # Barra lateral (Sidebar) con información de usuario y navegación
 with st.sidebar:
     st.markdown("### 👤 Sesión Activa")
-    st.write("Conectado como: **Administrador**")
+    st.write(f"Conectado como: **{st.session_state.username}**")
     
     st.markdown("---")
     st.markdown("### 🧭 Navegación")
@@ -111,6 +166,7 @@ with st.sidebar:
     st.markdown("---")
     if st.button("🚪 Cerrar Sesión", use_container_width=True):
         st.session_state.logged_in = False
+        st.session_state.username = ""
         st.rerun()
 
 # ------------------------------------------
@@ -186,60 +242,6 @@ elif menu_option == "📝 Reportes de Células":
         biblical_theme = st.text_input("Tema bíblico")
         central_text = st.text_input("Texto central")
         offering = st.number_input("Ofrenda", min_value=0.0, step=0.01)
-        needs = st.text_area("Necesidades reportadas")
-        spiritual_level = st.select_slider("Nivel espiritual", options=["Bajo", "Regular", "Bueno", "Excelente"])
-        attendance_level = st.slider("Porcentaje asistencia", 0, 100, 50)
-        submit_report = st.form_submit_button("Guardar Reporte")
-        
-        if submit_report:
-            if cell_name:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute("""
-                    INSERT INTO cell_reports 
-                    (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                """, (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
-                conn.commit()
-                conn.close()
-                st.success("Reporte de célula guardado exitosamente.")
-                st.rerun()
-            else:
-                st.error("Primero debe registrar una célula en la sección de Administración.")
-
-# ------------------------------------------
-# SECCIÓN: SEGUIMIENTO DE DESCARRILADOS
-# ------------------------------------------
-elif menu_option == "👣 Seguimiento de Descarrilados":
-    st.title("👣 Módulo de Consolidación")
-    st.subheader("Registro y Seguimiento de Personas Apartadas / Descarrilados")
-    
-    conn = sqlite3.connect(DB_PATH)
-    cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-    conn.close()
-    cell_options_desc = cells_df['cell_name'].tolist() if not cells_df.empty else []
-
-    with st.form("registro_descarrilado"):
-        person_name = st.text_input("Nombre Completo de la Persona")
-        assigned_cell = st.selectbox("Célula Responsable del Seguimiento", cell_options_desc)
-        last_attendance = st.date_input("Fecha aproximada de última asistencia")
-        reason = st.text_area("Motivo del alejamiento (si se conoce)")
-        action_plan = st.text_input("Acción a tomar (Ej: Visita, llamada, oración)")
-        current_status = st.selectbox("Estado actual", ["Apartado", "En contacto", "Visitado", "Reconciliado"])
-        
-        submit_backslider = st.form_submit_button("Guardar Registro de Seguimiento")
-        
-        if submit_backslider:
-            if person_name:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute("""
-                    INSERT INTO backsliders 
-                    (person_name, cell_name, last_attendance, reason, action_plan, status) 
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (person_name, assigned_cell, last_attendance.strftime("%Y-%m-%d"), reason, action_plan, current_status))
-                conn.commit()
-                conn.close()
                 
 
     # --- Panel / Dashboard Mejorado ---
