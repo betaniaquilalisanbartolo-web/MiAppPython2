@@ -302,7 +302,34 @@ with tab_descarrilados:
                 st.success(f"Registro de {person_name} guardado correctamente.")
             else:
                 st.error("El nombre de la persona es obligatorio.")
+
+    # --- Pestaña de Administración ---
+with tab_admin:
+    st.subheader("Administración: Registro de Nuevas Células")
     
+    with st.form("registro_celula"):
+        new_cell_name = st.text_input("Nombre de la Célula")
+        cell_leader = st.text_input("Nombre del Líder de la Célula")
+        cell_sector = st.text_input("Sector / Zona (Opcional)")
+        
+        submit_cell = st.form_submit_button("Registrar Célula")
+        
+        if submit_cell:
+            if new_cell_name and cell_leader:
+                conn = sqlite3.connect(DB_PATH)
+                c = conn.cursor()
+                # Asegúrate de que tu tabla 'cells' tenga estas columnas
+                c.execute("""
+                    INSERT INTO cells (cell_name, leader_name, sector) 
+                    VALUES (?, ?, ?)
+                """, (new_cell_name, cell_leader, cell_sector))
+                conn.commit()
+                conn.close()
+                st.success(f"Célula '{new_cell_name}' registrada con éxito.")
+                st.rerun() # Recarga la app para que aparezca en el selectbox de reportes
+            else:
+                st.error("Por favor, llena los campos obligatorios: Nombre y Líder.")
+
 
     
 
