@@ -264,8 +264,11 @@ if menu_option == "📊 Vista General":
     st.markdown("---")
     st.subheader("📈 Monitoreo de Metas Anuales por Célula")
     
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        # Consulta SQL segmentada de forma segura para evitar SyntaxError de indentación
-        part1 = "SELECT c.cell_name as 'Célula', c.yearly_target as 'Meta de Nuevos Miembros', "
-        part2 = "COUNT(m.id) as 'Miembros Registrados Actuales' FROM cells c "
+    # UNIFICACIÓN DE CONSULTA: Definida fuera del try para prevenir errores sintácticos de identación
+    query_metas = (
+        "SELECT c.cell_name as 'Célula', "
+        "c.yearly_target as 'Meta de Nuevos Miembros', "
+        "COUNT(m.id) as 'Miembros Registrados Actuales' "
+        "FROM cells c "
+        "LEFT JOIN members m ON c.cell_name = m.assigned_cell "
+        "GROUP BY c.cell_name"
