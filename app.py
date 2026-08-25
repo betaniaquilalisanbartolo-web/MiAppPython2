@@ -6,7 +6,7 @@ from datetime import datetime
 # Configuración de la página
 st.set_page_config(page_title="Panel de Control - Gestión de Células", layout="wide")
 
-# Archivo local de la base de datos
+# Archivo de la base de datos
 DB_PATH = "celulas.db"
 
 # ==========================================
@@ -27,7 +27,7 @@ def init_db():
     """)
     
     c.execute("SELECT COUNT(*) FROM users")
-    if c.fetchone() == 0:
+    if c.fetchone()[0] == 0:
         c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "Administrador"))
     
     # Tabla de Células (Administración)
@@ -103,9 +103,13 @@ def init_db():
     conn.commit()
     conn.close()
 
-init_db()
+# Ejecutar inicialización de forma segura
+try:
+    init_db()
+except Exception as e:
+    st.error(f"Error al inicializar Base de Datos: {e}")
 
-# Función auxiliar para descargas directas compatibles con Excel
+# Función auxiliar para descargas directas compatibles con Excel sin librerías externas
 def to_csv(df):
     return df.to_csv(index=False).encode('utf-8-sig')
 
@@ -197,14 +201,19 @@ with st.sidebar:
         st.session_state.username = ""
         st.rerun()
 
-# Carga de la lista dinámica de células registradas
-conn = sqlite3.connect(DB_PATH)
-cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-conn.close()
-cell_options = cells_df['cell_name'].tolist() if not cells_df.empty else []
+# Carga de la lista dinámica de células registradas (Previene errores si está vacía)
+cell_options = []
+try:
+    conn = sqlite3.connect(DB_PATH)
+    cells_df = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+    conn.close()
+    if not cells_df.empty:
+        cell_options = cells_df['cell_name'].tolist()
+except Exception:
+    pass
 
 # ==========================================
-# 4. LÓGICA DE LAS SECCIONES DEL PANEL (CORREGIDO)
+# 4. LÓGICA DE LAS SECCIONES DEL PANEL
 # ==========================================
 
 # ------------------------------------------
@@ -215,17 +224,18 @@ if menu_option == "📊 Vista General":
     st.write("Resumen ejecutivo del estado actual de los ministerios y células.")
     
     conn = sqlite3.connect(DB_PATH)
-    tot_cells = pd.read_sql_query("SELECT * FROM cells", conn).shape[0]
-    tot_members = pd.read_sql_query("SELECT * FROM members", conn).shape[0]
-    tot_reports = pd.read_sql_query("SELECT * FROM cell_reports", conn).shape[0]
-    tot_backsliders = pd.read_sql_query("SELECT * FROM backsliders WHERE status != 'Reconciliado con el Señor'", conn).shape[0]
+    # CORREGIDO: Conteo robusto de filas usando len() sobre la lectura para evitar fallos de Pandas
+    tot_cells = len(pd.read_sql_query("SELECT id FROM cells", conn))
+    tot_members = len(pd.read_sql_query("SELECT id FROM members", conn))
+    tot_reports = len(pd.read_sql_query("SELECT id FROM cell_reports", conn))
+    tot_backsliders = len(pd.read_sql_query("SELECT id FROM backsliders WHERE status != 'Reconciliado con el Señor'", conn))
     conn.close()
     
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric(label="🏠 Células Activas", value=int(tot_cells))
-    kpi2.metric(label="👥 Miembros Activos", value=int(tot_members))
-    kpi3.metric(label="📋 Reportes Entregados", value=int(tot_reports))
-    kpi4.metric(label="👣 Casos Descarrilados", value=int(tot_backsliders))
+    kpi1.metric(label="🏠 Células Activas", value=tot_cells)
+    kpi2.metric(label="👥 Miembros Activos", value=tot_members)
+    kpi3.metric(label="📋 Reportes Entregados", value=tot_reports)
+    kpi4.metric(label="👣 Casos Descarrilados", value=tot_backsliders)
 
 # ------------------------------------------
 # B. CONFIGURACIÓN DE CÉLULAS (ADMINISTRACIÓN)
@@ -251,10 +261,3 @@ elif menu_option == "⚙️ Configuración de Células":
                     st.success(f"Célula '{new_cell_name}' guardada correctamente.")
                     st.rerun()
                 except sqlite3.IntegrityError:
-                    st.error("Ya existe una célula registrada con ese nombre.")
-            else:
-                st.error("Por favor, rellene los campos obligatorios (*).")
-
-    st.markdown("---")
-    st.subheader("📋 Lista de Células dadas de Alta")
-    conn = sqlite3.connect(DB_PATH)
