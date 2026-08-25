@@ -69,7 +69,7 @@ def init_db():
         observations TEXT
     )""")
     
-    # Tabla de Reportes de Células (MODIFICADA: Agrega columna foto_path)
+    # Tabla de Reportes de Células (Con columna foto_path)
     c.execute("""
     CREATE TABLE IF NOT EXISTS cell_reports (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -266,10 +266,5 @@ if menu_option == "📊 Vista General":
     
     try:
         conn = sqlite3.connect(DB_PATH)
-        df_metas = pd.read_sql_query("""
-            SELECT c.cell_name as 'Célula', 
-                   c.yearly_target as 'Meta de Nuevos Miembros',
-                   COUNT(m.id) as 'Miembros Registrados Actuales'
-            FROM cells c
-            LEFT JOIN members m ON c.cell_name = m.assigned_cell
-            GROUP BY c.cell_name
+        # CORRECCIÓN DE COMILLAS: Consulta formateada en una sola línea segura
+        query_metas = "SELECT c.cell_name as 'Célula', c.yearly_target as 'Meta de Nuevos Miembros', COUNT(m.id) as 'Miembros Registrados Actuales' FROM cells c LEFT JOIN members m ON c.cell_name = m.assigned_cell GROUP BY c.cell_name"
