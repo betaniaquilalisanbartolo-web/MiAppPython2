@@ -24,240 +24,173 @@ def init_db():
         role TEXT DEFAULT 'Usuario'
     )""")
     
+    # Crear administrador por defecto si no existe
     c.execute("SELECT COUNT(*) FROM usuarios")
-    if c.fetchone() == 0:
+    if c.fetchone()[0] == 0:
         c.execute("INSERT INTO usuarios (username, password, role) VALUES (?, ?, ?)", ("admin", "admin123", "Administrador"))
     
-    # Tabla de Células (Administración)
+    # Tabla de Células
     c.execute("""
-    CREATE TABLE IF NOT EXISTS cells (
+    CREATE TABLE IF NOT EXISTS celulas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cell_name TEXT UNIQUE NOT NULL,
-        leader_name TEXT NOT NULL,
-        sector TEXT
+        nombre TEXT NOT NULL,
+        lider TEXT NOT NULL,
+        dia_reunion TEXT,
+        hora_reunion TEXT,
+        direccion TEXT,
+        fecha_creacion TEXT
     )""")
     
-    # Tabla de Nuevos Miembros
+    # Tabla de Asistencia / Reportes
     c.execute("""
-    CREATE TABLE IF NOT EXISTS members (
+    CREATE TABLE IF NOT EXISTS reportes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        full_name TEXT NOT NULL,
-        phone TEXT,
-        email TEXT,
-        address TEXT,
-        birth_date TEXT,
-        gender TEXT,
-        marital_status TEXT,
-        assigned_cell TEXT,
-        conversion_date TEXT,
-        baptized TEXT,
-        baptism_date TEXT,
-        membership_status TEXT,
-        emergency_contact TEXT,
-        emergency_phone TEXT,
-        prayer_requests TEXT
-    )""")
-    
-    # Tabla de Reportes de Células
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS cell_reports (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        cell_name TEXT,
-        meeting_date TEXT,
-        adults INTEGER,
-        youth INTEGER,
-        children INTEGER,
-        friends INTEGER,
-        visits INTEGER,
-        home_leader TEXT,
-        biblical_topic TEXT,
-        central_text TEXT,
-        offering REAL,
-        needs TEXT,
-        spiritual_level TEXT,
-        attendance_level INTEGER
-    )""")
-    
-    # Tabla de Descarrilados / Seguimiento
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS backsliders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        person_name TEXT NOT NULL,
-        phone TEXT,
-        cell_name TEXT,
-        last_attendance TEXT,
-        risk_level TEXT,
-        reason TEXT,
-        assigned_visitor TEXT,
-        action_plan TEXT,
-        visit_date TEXT,
-        status TEXT,
-        observations TEXT
+        celula_id INTEGER,
+        fecha TEXT,
+        asistentes INTEGER DEFAULT 0,
+        nuevos INTEGER DEFAULT 0,
+        observaciones TEXT,
+        FOREIGN KEY (celula_id) REFERENCES celulas(id) ON DELETE CASCADE
     )""")
     
     conn.commit()
     conn.close()
 
-try:
-    init_db()
-except Exception as e:
-    st.error(f"Error al inicializar Base de Datos: {e}")
+# Inicializar DB al arrancar
+init_db()
 
-# Función para codificación segura de descargas
-def to_csv(df):
-    return df.to_csv(index=False).encode('utf-8-sig')
-
-# ==========================================
-# 2. CONTROL DE ACCESO (LOGIN / REGISTRO)
-# ==========================================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
-
-if not st.session_state.logged_in:
-    st.markdown("<h2 style='text-align: center;'>🔐 Acceso al Sistema Ministerial</h2>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3)
-    
-    with col2:
-        tab_login, tab_signup = st.tabs(["🔑 Iniciar Sesión", "📝 Crear una Cuenta"])
-        
-        with tab_login:
-            with st.form("login_form"):
-                user_input = st.text_input("Usuario", key="login_user")
-                pass_input = st.text_input("Contraseña", type="password", key="login_pass")
-                login_button = st.form_submit_button("Ingresar al Panel")
-                
-                if login_button:
-                    if user_input and pass_input:
-                        conn = sqlite3.connect(DB_PATH)
-                        c = conn.cursor()
-                        c.execute("SELECT * FROM usuarios WHERE username = ? AND password = ?", (user_input, pass_input))
-                        user_record = c.fetchone()
-                        conn.close()
-                        
-                        if user_record:
-                            st.session_state.logged_in = True
-                            st.session_state.username = user_input
-                            st.success(f"¡Bienvenido, {user_input}!")
-                            st.rerun()
-                        else:
-                            st.error("Usuario o contraseña incorrectos.")
-                    else:
-                        st.error("Por favor llene todos los campos.")
-                        
-        with tab_signup:
-            with st.form("signup_form"):
-                new_user = st.text_input("Elige un Nombre de Usuario")
-                new_pass = st.text_input("Elige una Contraseña", type="password")
-                confirm_pass = st.text_input("Confirma tu Contraseña", type="password")
-                signup_button = st.form_submit_button("Registrar Cuenta")
-                
-                if signup_button:
-                    if not new_user or not new_pass:
-                        st.error("Todos los campos son obligatorios.")
-                    elif new_pass != confirm_pass:
-                        st.error("Las contraseñas no coinciden.")
-                    else:
-                        try:
-                            conn = sqlite3.connect(DB_PATH)
-                            c = conn.cursor()
-                            c.execute("INSERT INTO usuarios (username, password) VALUES (?, ?)", (new_user, new_pass))
-                            conn.commit()
-                            conn.close()
-                            st.success("¡Cuenta creada con éxito! Ya puedes iniciar sesión.")
-                        except sqlite3.IntegrityError:
-                            st.error("El nombre de usuario ya existe.")
-    st.stop()
+# Helper para conectar a la BD
+def run_query(query, params=(), fetch=False, is_select=True):
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        if is_select:
+            if fetch:
+                return cursor.fetchall()
+            return cursor.fetchall()
+        conn.commit()
 
 # ==========================================
-# 3. BARRA LATERAL DE NAVEGACIÓN
+# 2. SISTEMA DE AUTENTICACIÓN SIMPLE
 # ==========================================
-with st.sidebar:
-    st.markdown(f"### 👤 Sesión Activa\nConectado como: **{st.session_state.username}**")
-    st.markdown("---")
-    st.markdown("### 🎛️ Menú del Panel")
-    
-    menu_option = st.radio(
-        "Seleccione una sección:",
-        [
-            "📊 Vista General", 
-            "⚙️ Configuración de Células", 
-            "👤 Ingreso de Nuevos Miembros", 
-            "📝 Reportes de Células", 
-            "📉 Seguimiento de Almas"
-        ]
-    )
-    st.markdown("---")
-    if st.button("🚪 Cerrar Sesión", use_container_width=True):
-        st.session_state.logged_in = False
-        st.session_state.username = ""
-        st.rerun()
+if 'autenticado' not in st.session_state:
+    st.session_state.autenticado = False
+    st.session_state.usuario = None
+    st.session_state.rol = None
 
-# ==========================================
-# 4. LÍGICA DE LAS SECCIONES DEL PANEL
-# ==========================================
-
-# A. VISTA GENERAL (ESTADÍSTICAS)
-if menu_option == "📊 Vista General":
-    st.title("📊 Panel de Control y Estadísticas")
-    st.write("Resumen ejecutivo del estado actual de los ministerios y células.")
-    
-    conn = sqlite3.connect(DB_PATH)
-    tot_cells = len(pd.read_sql_query("SELECT id FROM cells", conn))
-    tot_members = len(pd.read_sql_query("SELECT id FROM members", conn))
-    tot_reports = len(pd.read_sql_query("SELECT id FROM cell_reports", conn))
-    try:
-        tot_backsliders = len(pd.read_sql_query("SELECT id FROM backsliders WHERE status != 'Reconciliado'", conn))
-    except:
-        tot_backsliders = 0
-    conn.close()
-    
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric(label="🏠 Células Activas", value=tot_cells)
-    kpi2.metric(label="👥 Miembros Registrados", value=tot_members)
-    kpi3.metric(label="📄 Reportes Entregados", value=tot_reports)
-    kpi4.metric(label="⚠️ Casos en Seguimiento", value=tot_backsliders)
-
-# B. CONFIGURACIÓN DE CÉLULAS
-elif menu_option == "⚙️ Configuración de Células":
-    st.title("⚙️ Estructura y Administración")
-    st.subheader("Formulario de Registro: Células y Líderes")
-    
-    with st.form("registro_celula"):
-        new_cell_name = st.text_input("Nombre de la Célula *")
-        cell_leader = st.text_input("Nombre del Líder Asignado *")
-        cell_sector = st.text_input("Sector / Zona Geográfica")
-        submit_cell = st.form_submit_button("Registrar Nueva Célula")
-        
-        if submit_cell:
-            if new_cell_name and cell_leader:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute("SELECT COUNT(*) FROM cells WHERE cell_name = ?", (new_cell_name,))
-                if c.fetchone()[0] > 0:
-                    st.error("Ya existe una célula registrada con ese nombre.")
-                else:
-                    c.execute("INSERT INTO cells (cell_name, leader_name, sector) VALUES (?, ?, ?)", 
-                              (new_cell_name, cell_leader, cell_sector))
-                    conn.commit()
-                    st.success(f"Célula '{new_cell_name}' registrada exitosamente.")
-                    st.rerun()
-                conn.close()
-            else:
-                st.error("Por favor rellene los campos obligatorios (*).")
-                
-    st.markdown("---")
-    st.subheader("📋 Células Registradas")
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        df_celulas = pd.read_sql_query("SELECT id as 'ID', cell_name as 'Célula', leader_name as 'Líder', sector as 'Sector/Zona' FROM cells ORDER BY cell_name ASC", conn)
-        conn.close()
-        if not df_celulas.empty:
-            st.dataframe(df_celulas, use_container_width=True)
+def login():
+    st.subheader("🔑 Iniciar Sesión")
+    user = st.text_input("Usuario")
+    password = st.text_input("Contraseña", type="password")
+    if st.button("Ingresar"):
+        res = run_query("SELECT role FROM usuarios WHERE username = ? AND password = ?", (user, password))
+        if res:
+            st.session_state.autenticado = True
+            st.session_state.usuario = user
+            st.session_state.rol = res[0][0]
+            st.success(f"Bienvenido {user} ({st.session_state.rol})")
+            st.rerun()
         else:
-            st.info("No hay células registradas todavía.")
-    except Exception as e:
-        st.error(f"Error al cargar células: {e}")
+            st.error("Credenciales incorrectas")
 
-# C. INGRESO DE NUEVOS MIEMBROS (SINCRONIZACIÓN AUTOMÁTICA EN TIEMPO REAL)
+def logout():
+    st.session_state.autenticado = False
+    st.session_state.usuario = None
+    st.session_state.rol = None
+    st.rerun()
+
+# ==========================================
+# 3. INTERFAZ PRINCIPAL
+# ==========================================
+if not st.session_state.autenticado:
+    login()
+else:
+    # Barra lateral
+    st.sidebar.title(f"👤 {st.session_state.usuario}")
+    st.sidebar.write(f"Rol: **{st.session_state.rol}**")
+    menu = st.sidebar.radio("Navegación", ["Dashboard", "Gestionar Células", "Registrar Reporte"])
+    if st.sidebar.button("Cerrar Sesión"):
+        logout()
+
+    # --- VISTA: DASHBOARD ---
+    if menu == "Dashboard":
+        st.title("📊 Panel de Control General")
+        
+        # Métricas rápidas
+        df_celulas = pd.read_sql_query("SELECT * FROM celulas", sqlite3.connect(DB_PATH))
+        df_reportes = pd.read_sql_query("SELECT * FROM reportes", sqlite3.connect(DB_PATH))
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Células", len(df_celulas))
+        col2.metric("Total Asistencias Registradas", int(df_reportes['asistentes'].sum()) if not df_reportes.empty else 0)
+        col3.metric("Nuevos Integrantes", int(df_reportes['nuevos'].sum()) if not df_reportes.empty else 0)
+        
+        st.subheader("📍 Lista de Células Activas")
+        st.dataframe(df_celulas, use_container_width=True)
+
+    # --- VISTA: GESTIONAR CÉLULAS ---
+    elif menu == "Gestionar Células":
+        st.title("🏢 Administración de Células")
+        
+        # Formulario de creación (Solo Admin o Usuario autorizado)
+        with st.expander("➕ Crear Nueva Célula", expanded=True):
+            with st.form("nueva_celula"):
+                nombre = st.text_input("Nombre de la Célula")
+                lider = st.text_input("Nombre del Líder")
+                dia = st.selectbox("Día de Reunión", ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
+                hora = st.time_input("Hora de Reunión", value=datetime.now().time())
+                direccion = st.text_area("Dirección")
+                
+                if st.form_submit_button("Guardar Célula"):
+                    if nombre and lider:
+                        run_query("""
+                            INSERT INTO celulas (nombre, lider, dia_reunion, hora_reunion, direccion, fecha_creacion)
+                            VALUES (?, ?, ?, ?, ?, ?)""",
+                            (nombre, lider, dia, hora.strftime("%H:%M"), direccion, datetime.now().strftime("%Y-%m-%d")),
+                            is_select=False)
+                        st.success("¡Célula registrada con éxito!")
+                        st.rerun()
+                    else:
+                        st.error("El nombre y el líder son obligatorios.")
+
+        # Eliminar células (Acción crítica)
+        st.subheader("🗑️ Eliminar o Modificar")
+        conn = sqlite3.connect(DB_PATH)
+        df_celulas = pd.read_sql_query("SELECT id, nombre, lider FROM celulas", conn)
+        conn.close()
+        
+        if not df_celulas.empty:
+            opciones = {f"{row['nombre']} - {row['lider']}": row['id'] for _, row in df_celulas.iterrows()}
+            seleccion = st.selectbox("Selecciona una célula para eliminar", opciones.keys())
+            if st.button("Eliminar Célula Permanentemente", type="primary"):
+                run_query("DELETE FROM celulas WHERE id = ?", (opciones[seleccion],), is_select=False)
+                st.success("Célula eliminada.")
+                st.rerun()
+
+    # --- VISTA: REGISTRAR REPORTE ---
+    elif menu == "Registrar Reporte":
+        st.title("📝 Reporte de Asistencia Semanal")
+        
+        conn = sqlite3.connect(DB_PATH)
+        df_celulas = pd.read_sql_query("SELECT id, nombre FROM celulas", conn)
+        conn.close()
+        
+        if df_celulas.empty:
+            st.warning("Primero debes crear una célula para poder generar reportes.")
+        else:
+            celulas_dict = {row['nombre']: row['id'] for _, row in df_celulas.iterrows()}
+            
+            with st.form("reporte_asistencia"):
+                celula_sel = st.selectbox("Selecciona la Célula", celulas_dict.keys())
+                fecha_reunion = st.date_input("Fecha de la Reunión", datetime.now())
+                asistentes = st.number_input("Cantidad de Asistentes", min_value=0, step=1)
+                nuevos = st.number_input("Cantidad de Personas Nuevas", min_value=0, step=1)
+                obs = st.text_area("Observaciones o Peticiones de Oración")
+                
+                if st.form_submit_button("Enviar Reporte"):
+                    run_query("""
+                        INSERT INTO reportes (celula_id, fecha, asistentes, nuevos, observaciones)
+                        VALUES (?, ?, ?, ?, ?)""",
+                        (celulas_dict[celula_sel], fecha_reunion.strftime("%Y-%m-%d"), asistentes, nuevos, obs),
+                        is_select=False)
+                    st.success("¡Reporte guardado correctamente!")
