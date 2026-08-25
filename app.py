@@ -264,11 +264,9 @@ if menu_option == "📊 Vista General":
     st.markdown("---")
     st.subheader("📈 Monitoreo de Metas Anuales por Célula")
     
-    # UNIFICACIÓN DE CONSULTA: Definida fuera del try para prevenir errores sintácticos de identación
-    query_metas = (
-        "SELECT c.cell_name as 'Célula', "
-        "c.yearly_target as 'Meta de Nuevos Miembros', "
-        "COUNT(m.id) as 'Miembros Registrados Actuales' "
-        "FROM cells c "
-        "LEFT JOIN members m ON c.cell_name = m.assigned_cell "
-        "GROUP BY c.cell_name"
+    # FIJADO DE RAÍZ: Consulta SQL limpia en una sola línea de texto sin paréntesis propensos a errores
+    query_metas = "SELECT c.cell_name as 'Célula', c.yearly_target as 'Meta de Nuevos Miembros', COUNT(m.id) as 'Miembros Registrados Actuales' FROM cells c LEFT JOIN members m ON c.cell_name = m.assigned_cell GROUP BY c.cell_name"
+    
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        df_metas = pd.read_sql_query(query_metas, conn)
