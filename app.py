@@ -230,44 +230,47 @@ else:
                         st.warning(f"Se ha registrado el abandono de {selected_convert} para evaluación consolidada.")
             else:
                 st.info("No hay nuevos convertidos registrados en el sistema para procesar una baja.")
-                
-    # --- 3. Reportes ---
-    with tab3:
-        st.subheader("Registro de Reportes de Células")
-        conn = sqlite3.connect(DB_PATH)
-        cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
-        conn.close()
-        cell_options = cells['cell_name'].tolist() if not cells.empty else []
+
+
+# --- 3. Reportes ---
+with tab3:
+    st.subheader("Registro de Reportes de Células")
+    conn = sqlite3.connect(DB_PATH)
+    cells = pd.read_sql_query("SELECT cell_name FROM cells", conn)
+    conn.close()
+    cell_options = cells['cell_name'].tolist() if not cells.empty else []
+    
+    with st.form("registro_reporte"):
+        cell_name = st.selectbox("Célula", cell_options)
+        meeting_date = st.date_input("Fecha de reunión")
+        adults = st.number_input("Adultos", min_value=0, step=1)
+        youth = st.number_input("Jóvenes", min_value=0, step=1)
+        children = st.number_input("Niños", min_value=0, step=1)
+        friends = st.number_input("Amigos", min_value=0, step=1)
+        visits = st.number_input("Visitas", min_value=0, step=1)
+        house_leader = st.text_input("Líder de casa")
+        biblical_theme = st.text_input("Tema bíblico")
+        central_text = st.text_input("Texto central")
+        offering = st.number_input("Ofrenda", min_value=0.0, step=0.01)
+        needs = st.text_area("Necesidades reportadas")
+        spiritual_level = st.select_slider("Nivel espiritual", options=["Bajo", "Regular", "Bueno", "Excelente"])
+        attendance_level = st.slider("Porcentaje asistencia", 0, 100, 50)
+        submit_report = st.form_submit_button("Guardar Reporte")
         
-        with st.form("registro_reporte"):
-            cell_name = st.selectbox("Célula", cell_options)
-            meeting_date = st.date_input("Fecha de reunión")
-            adults = st.number_input("Adultos", min_value=0, step=1)
-            youth = st.number_input("Jóvenes", min_value=0, step=1)
-            children = st.number_input("Niños", min_value=0, step=1)
-            friends = st.number_input("Amigos", min_value=0, step=1)
-            visits = st.number_input("Visitas", min_value=0, step=1)
-            house_leader = st.text_input("Líder de casa")
-            biblical_theme = st.text_input("Tema bíblico")
-            central_text = st.text_input("Texto central")
-            offering = st.number_input("Ofrenda", min_value=0.0, step=0.01)
-            needs = st.text_area("Necesidades reportadas")
-            spiritual_level = st.select_slider("Nivel espiritual", options=["Bajo", "Regular", "Bueno", "Excelente"])
-            attendance_level = st.slider("Porcentaje asistencia", 0, 100, 50)
-            submit_report = st.form_submit_button("Guardar Reporte")
-            
-            if submit_report:
-                conn = sqlite3.connect(DB_PATH)
-                c = conn.cursor()
-                c.execute("""INSERT INTO cell_reports 
-                    (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
-                conn.commit()
-                conn.close()
-                st.success("Reporte de célula guardado exitosamente.")
-                
-# --- Pestaña de Descarrilados ---
+        if submit_report:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            c.execute("""INSERT INTO cell_reports 
+                (cell_name, meeting_date, adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (cell_name, meeting_date.strftime("%Y-%m-%d"), adults, youth, children, friends, visits, house_leader, biblical_theme, central_text, offering, needs, spiritual_level, attendance_level))
+            conn.commit()
+            conn.close()
+            st.success("Reporte de célula guardado exitosamente.")
+            st.rerun()
+
+
+# --- 4. Descarrilados ---
 with tab_descarrilados:
     st.subheader("Registro y Seguimiento de Personas Apartadas / Descarrilados")
     
@@ -291,7 +294,6 @@ with tab_descarrilados:
             if person_name:
                 conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
-                # Esta consulta asume que creaste una tabla llamada 'backsliders'
                 c.execute("""
                     INSERT INTO backsliders 
                     (person_name, cell_name, last_attendance, reason, action_plan, status) 
@@ -300,9 +302,11 @@ with tab_descarrilados:
                 conn.commit()
                 conn.close()
                 st.success(f"Registro de {person_name} guardado correctamente.")
+                st.rerun()
             else:
                 st.error("El nombre de la persona es obligatorio.")
 
+    
     # --- Pestaña de Administración ---
 with tab_admin:
     st.subheader("Administración: Registro de Nuevas Células")
@@ -328,13 +332,8 @@ with tab_admin:
                 st.success(f"Célula '{new_cell_name}' registrada con éxito.")
                 st.rerun() # Recarga la app para que aparezca en el selectbox de reportes
             else:
-                st.error("Por favor, llena los campos obligatorios: Nombre y Líder.")
-
-
-    
-
-
-    
+                st.error("Por favor, llena los campos obligatorios: Nombre y Líder."
+                         
 
     # --- Panel / Dashboard Mejorado ---
     with tab6:
