@@ -87,6 +87,22 @@ def init_db():
         fecha_registro DATE DEFAULT CURRENT_DATE
     )
     """)
+
+    # Migración automática de columnas para bases de datos existentes
+    columnas_reportes = [
+        ("jefe_casa", "TEXT"),
+        ("tema_biblico", "TEXT"),
+        ("texto_biblico", "TEXT"),
+        ("asistencia_amigos", "INTEGER DEFAULT 0"),
+        ("asistencia_ninos", "INTEGER DEFAULT 0"),
+        ("observaciones", "TEXT")
+    ]
+    for col_nombre, col_tipo in columnas_reportes:
+        try:
+            cursor.execute(f"ALTER TABLE reportes_celula ADD COLUMN {col_nombre} {col_tipo}")
+        except sqlite3.OperationalError:
+            pass  # La columna ya existe
+
     conn.commit()
     conn.close()
 
@@ -96,7 +112,7 @@ init_db()
 # FUNCIONES AUXILIARES DE DATOS
 # -----------------------------------------------------------------------------
 def obtener_lista_celulas():
-    """Obtiene la lista única de células registradas en la tabla 'celulas', miembros y reportes."""
+    """Obtiene la lista única de células registradas en 'celulas', 'miembros' y 'reportes'."""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -113,13 +129,13 @@ def obtener_lista_celulas():
     return celulas
 
 def obtener_lider_por_celula(nombre_celula):
-    """Obtiene el líder registrado en la tabla celulas, en reportes previos o un miembro con rol 'Líder'."""
+    """Obtiene el líder registrado en la tabla celulas, reportes previos o miembros."""
     if not nombre_celula:
         return ""
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # 1. Buscar en la tabla de celulas
+    # 1. Buscar en la tabla celulas
     cursor.execute("SELECT lider FROM celulas WHERE nombre = ?", (nombre_celula,))
     res = cursor.fetchone()
     if res and res["lider"]:
