@@ -1,160 +1,357 @@
+import sqlite3
+import hashlib
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 
-# ---------------------------------------------------------
-# 1. Configuración de la página
-# ---------------------------------------------------------
+# -----------------------------------------------------------------------------
+# 1. CONFIGURACIÓN DE LA PÁGINA Y BASE DE DATOS
+# -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Dashboard Interactivo",
-    page_icon="📊",
+    page_title="Gestión de Iglesia - Células",
+    page_icon="⛪",
     layout="wide"
 )
 
-st.title("📊 Dashboard de Análisis y Control")
-st.caption("Aplicación completa desarrollada en Streamlit")
+def get_db_connection():
+    conn = sqlite3.connect("iglesia.db")
+    conn.row_factory = sqlite3.Row
+    return conn
 
-# ---------------------------------------------------------
-# 2. Inicialización de Estado de Sesión (Session State)
-# ---------------------------------------------------------
-if "df" not in st.session_state:
-    # Generar datos iniciales ficticios
-    np.random.seed(42)
-    fechas = pd.date_range(start="2026-01-01", periods=100)
-    categorias = ["Electrónica", "Ropa", "Hogar", "Juguetes"]
+def init_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-    st.session_state.df = pd.DataFrame({
-        "Fecha": np.random.choice(fechas, 100),
-        "Categoría": np.random.choice(categorias, 100),
-        "Ventas": np.random.randint(100, 1000, 100),
-        "Satisfacción": np.random.uniform(3.0, 5.0, 100).round(1)
-    })
-
-# ---------------------------------------------------------
-# 3. Barra Lateral (Sidebar) - Filtros y Carga de Archivos
-# ---------------------------------------------------------
-with st.sidebar:
-    st.header("⚙️ Configuración y Filtros")
-    
-    # Subida de archivos opcional
-    uploaded_file = st.file_uploader("Cargar tu propio CSV", type=["csv"])
-    if uploaded_file is not None:
-        try:
-            st.session_state.df = pd.read_csv(uploaded_file)
-            st.success("¡Archivo cargado correctamente!")
-        except Exception as e:
-            st.error(f"Error al leer el archivo: {e}")
-            
-    st.divider()
-    
-    # Filtro por categoría (si la columna existe)
-    if "Categoría" in st.session_state.df.columns:
-        cats_disponibles = list(st.session_state.df["Categoría"].unique())
-        cats_seleccionadas = st.multiselect(
-            "Filtrar por Categoría:",
-            options=cats_disponibles,
-            default=cats_disponibles
+    # Tabla de Usuarios para Login
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
         )
-    else:
-        cats_seleccionadas = []
-
-# Aplicar filtro al DataFrame
-df_filtrado = st.session_state.df.copy()
-if cats_seleccionadas and "Categoría" in df_filtrado.columns:
-    df_filtrado = df_filtrado[df_filtrado["Categoría"].isin(cats_seleccionadas)]
-
-# ---------------------------------------------------------
-# 4. Panel Principal - Métricas Clave (KPIs)
-# ---------------------------------------------------------
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    total_registros = len(df_filtrado)
-    st.metric(label="Total Registros", value=total_registros)
-
-with col2:
-    if "Ventas" in df_filtrado.columns:
-        total_ventas = df_filtrado["Ventas"].sum()
-        st.metric(label="Total Ventas ($)", value=f"${total_ventas:,.2f}")
-    else:
-        st.metric(label="Total Ventas", value="N/A")
-
-with col3:
-    if "Satisfacción" in df_filtrado.columns:
-        prom_sat = df_filtrado["Satisfacción"].mean()
-        st.metric(label="Promedio Satisfacción", value=f"{prom_sat:.2f} / 5.0")
-    else:
-        st.metric(label="Promedio Satisfacción", value="N/A")
-
-st.divider()
-
-# ---------------------------------------------------------
-# 5. Pestañas de Visualización y Datos
-# ---------------------------------------------------------
-tab_graficos, tab_tabla, tab_agregar = st.tabs(["📈 Gráficos", "📋 Tabla de Datos", "➕ Agregar Registro"])
-
-with tab_graficos:
-    col_g1, col_g2 = st.columns(2)
+    ''')
     
-    with col_g1:
-        if "Categoría" in df_filtrado.columns and "Ventas" in df_filtrado.columns:
-            st.subheader("Ventas por Categoría")
-            fig_bar = px.bar(
-                df_filtrado, 
-                x="Categoría", 
-                y="Ventas", 
-                color="Categoría",
-                text_auto=True
-            )
-            st.plotly_chart(fig_bar, use_container_width=True)
-        else:
-            st.info("Faltan las columnas 'Categoría' o 'Ventas' para este gráfico.")
+    # Tabla de Miembros por Célula
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS miembros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre_completo TEXT NOT NULL,
+            telefono TEXT,
+            celula TEXT NOT NULL,
+            rol TEXT NOT NULL,
+            fecha_registro DATE DEFAULT CURRENT_DATE
+        )
+    ''')
+    
+    # Tabla de Reportes de Célula
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS reportes_celula (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            celula TEXT NOT NULL,
+            lider TEXT NOT NULL,
+            fecha DATE NOT NULL,
+            asistencia_miembros INTEGER NOT NULL,
+            asistencia_visitas INTEGER NOT NULL,
+            ofrenda REAL DEFAULT 0.0,
+            observaciones TEXT
+        )
+    ''')
+    
+    # Tabla de Descarrilados / Ausentes
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS descarrilados (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            telefono TEXT,
+            celula TEXT,
+            motivo TEXT,
+            estado_seguimiento TEXT DEFAULT 'Pendiente',
+            fecha_registro DATE DEFAULT CURRENT_DATE
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# -----------------------------------------------------------------------------
+# 2. FUNCIONES DE SEGURIDAD (HASH DE CONTRASEÑAS)
+# -----------------------------------------------------------------------------
+def make_hashes(password):
+    return hashlib.sha256(str.encode(password)).hexdigest()
+
+def check_hashes(password, hashed_text):
+    if make_hashes(password) == hashed_text:
+        return hashed_text
+    return False
+
+# -----------------------------------------------------------------------------
+# 3. CONTROL DE SESIÓN Y AUTENTICACIÓN
+# -----------------------------------------------------------------------------
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+if "user_name" not in st.session_state:
+    st.session_state["user_name"] = ""
+
+def auth_screen():
+    st.title("⛪ Sistema de Gestión Ecuménica y Células")
+    
+    opcion = st.sidebar.selectbox("Acceso al Sistema", ["Iniciar Sesión", "Crear nueva cuenta de usuario"])
+    
+    if opcion == "Iniciar Sesión":
+        st.subheader("🔑 Iniciar Sesión")
+        email = st.text_input("Correo Electrónico")
+        password = st.text_input("Contraseña", type="password")
+        
+        if st.button("Ingresar", type="primary"):
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            hashed_pw = make_hashes(password)
+            cursor.execute("SELECT * FROM usuarios WHERE email = ? AND password = ?", (email, hashed_pw))
+            usuario = cursor.fetchone()
+            conn.close()
             
-    with col_g2:
-        if "Satisfacción" in df_filtrado.columns and "Ventas" in df_filtrado.columns:
-            st.subheader("Relación Satisfacción vs Ventas")
-            fig_scatter = px.scatter(
-                df_filtrado, 
-                x="Satisfacción", 
-                y="Ventas", 
-                color="Categoría" if "Categoría" in df_filtrado.columns else None
+            if usuario:
+                st.session_state["logged_in"] = True
+                st.session_state["user_name"] = usuario["nombre"]
+                st.success(f"Bienvenido/a {usuario['nombre']}")
+                st.rerun()
+            else:
+                st.error("Correo o contraseña incorrectos")
+                
+    elif opcion == "Crear nueva cuenta de usuario":
+        st.subheader("👤 Crear Nueva Cuenta")
+        nombre = st.text_input("Nombre Completo")
+        email = st.text_input("Correo Electrónico")
+        password = st.text_input("Contraseña", type="password")
+        confirm_password = st.text_input("Confirmar Contraseña", type="password")
+        
+        if st.button("Registrarse"):
+            if password != confirm_password:
+                st.warning("Las contraseñas no coinciden")
+            elif not nombre or not email or not password:
+                st.warning("Por favor completa todos los campos")
+            else:
+                try:
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "INSERT INTO usuarios (nombre, email, password) VALUES (?, ?, ?)",
+                        (nombre, email, make_hashes(password))
+                    )
+                    conn.commit()
+                    conn.close()
+                    st.success("Cuenta creada exitosamente. Ahora puedes Iniciar Sesión.")
+                except sqlite3.IntegrityError:
+                    st.error("El correo ya se encuentra registrado.")
+
+# -----------------------------------------------------------------------------
+# 4. MÓDULOS Y VISTAS PRINCIPALES
+# -----------------------------------------------------------------------------
+def panel_de_control():
+    st.title("📊 Panel de Control")
+    st.markdown("---")
+    
+    conn = get_db_connection()
+    df_reportes = pd.read_sql_query("SELECT * FROM reportes_celula", conn)
+    df_miembros = pd.read_sql_query("SELECT * FROM miembros", conn)
+    conn.close()
+    
+    # Indicadores
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        total_reportes = len(df_reportes)
+        st.metric("Total Reportes", total_reportes)
+    with col2:
+        total_asistencia = df_reportes["asistencia_miembros"].sum() + df_reportes["asistencia_visitas"].sum() if not df_reportes.empty else 0
+        st.metric("Asistencia Total Acumulada", total_asistencia)
+    with col3:
+        total_miembros = len(df_miembros)
+        st.metric("Total Miembros Registrados", total_miembros)
+    with col4:
+        total_ofrenda = df_reportes["ofrenda"].sum() if not df_reportes.empty else 0.0
+        st.metric("Total Ofrendas ($)", f"${total_ofrenda:,.2f}")
+        
+    st.markdown("---")
+    
+    col_chart1, col_chart2 = st.columns(2)
+    
+    with col_chart1:
+        st.subheader("📈 Gráficos de Células")
+        if not df_reportes.empty:
+            df_celula_asistencia = df_reportes.groupby("celula")[["asistencia_miembros", "asistencia_visitas"]].sum().reset_index()
+            fig_celulas = px.bar(
+                df_celula_asistencia,
+                x="celula",
+                y=["asistencia_miembros", "asistencia_visitas"],
+                title="Asistencia por Célula (Miembros vs Visitas)",
+                barmode="group",
+                labels={"value": "Personas", "celula": "Célula", "variable": "Tipo"}
             )
-            st.plotly_chart(fig_scatter, use_container_width=True)
+            st.plotly_chart(fig_celulas, use_container_width=True)
         else:
-            st.info("Faltan las columnas 'Satisfacción' o 'Ventas' para este gráfico.")
+            st.info("Aún no hay reportes registrados para mostrar gráficos.")
+            
+    with col_chart2:
+        st.subheader("👥 Gráficos de Miembros")
+        if not df_miembros.empty:
+            df_miembros_celula = df_miembros["celula"].value_counts().reset_index()
+            df_miembros_celula.columns = ["Célula", "Cantidad"]
+            fig_miembros = px.pie(
+                df_miembros_celula,
+                names="Célula",
+                values="Cantidad",
+                title="Distribución de Miembros por Célula",
+                hole=0.4
+            )
+            st.plotly_chart(fig_miembros, use_container_width=True)
+        else:
+            st.info("Aún no hay miembros registrados para mostrar gráficos.")
 
-with tab_tabla:
-    st.subheader("Vista Previa del Dataset")
-    st.dataframe(df_filtrado, use_container_width=True)
+def registro_miembros():
+    st.title("📌 Registro de Miembro por Célula")
     
-    # Botón de descarga CSV
-    csv_bytes = df_filtrado.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Descargar datos filtrados (CSV)",
-        data=csv_bytes,
-        file_name="datos_filtrados.csv",
-        mime="text/csv"
-    )
+    with st.form("form_miembro", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            nombre = st.text_input("Nombre Completo")
+            telefono = st.text_input("Teléfono / WhatsApp")
+        with col2:
+            celula = st.text_input("Nombre / Número de Célula")
+            rol = st.selectbox("Rol en la Célula", ["Miembro", "Líder", "Anfitrión", "Asistente"])
+            
+        guardar = st.form_submit_button("Registrar Miembro")
+        
+        if guardar:
+            if nombre and celula:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO miembros (nombre_completo, telefono, celula, rol) VALUES (?, ?, ?, ?)",
+                    (nombre, telefono, celula, rol)
+                )
+                conn.commit()
+                conn.close()
+                st.success(f"Miembro {nombre} registrado con éxito.")
+            else:
+                st.warning("Completa el nombre y la célula como mínimo.")
+                
+    st.subheader("Lista de Miembros Registrados")
+    conn = get_db_connection()
+    df_miembros = pd.read_sql_query("SELECT id, nombre_completo, telefono, celula, rol, fecha_registro FROM miembros", conn)
+    conn.close()
+    st.dataframe(df_miembros, use_container_width=True)
 
-with tab_agregar:
-    st.subheader("Agregar un nuevo registro manualmente")
+def reporte_celula():
+    st.title("📋 Reporte de Célula")
     
-    with st.form("form_nuevo_registro"):
-        nueva_cat = st.selectbox("Categoría", ["Electrónica", "Ropa", "Hogar", "Juguetes"])
-        nuevas_ventas = st.number_input("Monto de Ventas ($)", min_value=1, max_value=10000, value=150)
-        nueva_sat = st.slider("Puntaje de Satisfacción", 1.0, 5.0, 4.0, step=0.1)
+    with st.form("form_reporte", clear_on_submit=True):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            celula = st.text_input("Célula")
+            lider = st.text_input("Líder a Cargo")
+            fecha = st.date_input("Fecha del Reporte")
+        with col2:
+            asist_miembros = st.number_input("Asistencia de Miembros", min_value=0, step=1)
+            asist_visitas = st.number_input("Asistencia de Visitas", min_value=0, step=1)
+        with col3:
+            ofrenda = st.number_input("Monto de Ofrenda", min_value=0.0, step=1.0)
+            observaciones = st.text_area("Observaciones / Peticiones")
+            
+        guardar = st.form_submit_button("Guardar Reporte")
         
-        btn_guardar = st.form_submit_button("Guardar Registro")
+        if guardar:
+            if celula and lider:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute(
+                    '''INSERT INTO reportes_celula 
+                       (celula, lider, fecha, asistencia_miembros, asistencia_visitas, ofrenda, observaciones)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                    (celula, lider, fecha, asist_miembros, asist_visitas, ofrenda, observaciones)
+                )
+                conn.commit()
+                conn.close()
+                st.success("Reporte guardado correctamente.")
+            else:
+                st.warning("Por favor ingresa la célula y el nombre del líder.")
+                
+    st.subheader("Historial de Reportes")
+    conn = get_db_connection()
+    df_rep = pd.read_sql_query("SELECT * FROM reportes_celula ORDER BY fecha DESC", conn)
+    conn.close()
+    st.dataframe(df_rep, use_container_width=True)
+
+def registro_descarrilados():
+    st.title("💔 Registro de Descarrilados / Ausentes")
+    st.info("Espacio para dar seguimiento pastoral a las personas que se han distanciado de la iglesia o célula.")
+    
+    with st.form("form_descarrilados", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            nombre = st.text_input("Nombre de la Persona")
+            telefono = st.text_input("Teléfono")
+            celula = st.text_input("Célula a la que pertenecía")
+        with col2:
+            estado = st.selectbox("Estado de Seguimiento", ["Pendiente", "En Contacto", "Restaurado", "No Interesado"])
+            motivo = st.text_area("Motivo de la ausencia / Observación pastoral")
+            
+        guardar = st.form_submit_button("Registrar para Seguimiento")
         
-        if btn_guardar:
-            nuevo_row = pd.DataFrame([{
-                "Fecha": pd.Timestamp.now(),
-                "Categoría": nueva_cat,
-                "Ventas": nuevas_ventas,
-                "Satisfacción": nueva_sat
-            }])
-            # Actualizar el DataFrame en sesión
-            st.session_state.df = pd.concat([st.session_state.df, nuevo_row], ignore_index=True)
-            st.success("¡Registro agregado exitosamente!")
+        if guardar:
+            if nombre:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO descarrilados (nombre, telefono, celula, motivo, estado_seguimiento) VALUES (?, ?, ?, ?, ?)",
+                    (nombre, telefono, celula, motivo, estado)
+                )
+                conn.commit()
+                conn.close()
+                st.success("Registro añadido a la lista de consolidación/seguimiento.")
+            else:
+                st.warning("Por favor ingrese al menos el nombre.")
+                
+    st.subheader("Personas en Seguimiento Pastoral")
+    conn = get_db_connection()
+    df_desc = pd.read_sql_query("SELECT * FROM descarrilados ORDER BY fecha_registro DESC", conn)
+    conn.close()
+    st.dataframe(df_desc, use_container_width=True)
+
+# -----------------------------------------------------------------------------
+# 5. ESTRUCTURA PRINCIPAL DE LA APLICACIÓN
+# -----------------------------------------------------------------------------
+def main():
+    if not st.session_state["logged_in"]:
+        auth_screen()
+    else:
+        st.sidebar.write(f"👤 Usuario: **{st.session_state['user_name']}**")
+        if st.sidebar.button("Cerrar Sesión"):
+            st.session_state["logged_in"] = False
+            st.session_state["user_name"] = ""
             st.rerun()
+            
+        st.sidebar.markdown("---")
+        opcion = st.sidebar.radio(
+            "Navegación Principales",
+            [
+                "Panel de Control",
+                "Registro_miembro por Célula",
+                "Reporte de Célula",
+                "Registro de Descarrilados"
+            ]
+        )
+        
+        if opcion == "Panel de Control":
+            panel_de_control()
+        elif opcion == "Registro_miembro por Célula":
+            registro_miembros()
+        elif opcion == "Reporte de Célula":
+            reporte_celula()
+        elif opcion == "Registro de Descarrilados":
+            registro_descarrilados()
+
+if __name__ == "__main__":
+    main()
