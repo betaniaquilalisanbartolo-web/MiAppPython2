@@ -1,571 +1,291 @@
-import hashlib
+from flask import Flask, render_template, request, redirect, url_for, Response
 import sqlite3
+import os
 import pandas as pd
-import plotly.express as px
-import streamlit as st
+from io import BytesIO
 
-# -----------------------------------------------------------------------------
-# 1. CONFIGURACIÓN DE LA PÁGINA Y BASE DE DATOS
-# -----------------------------------------------------------------------------
-st.set_page_config(
-    page_title="Gestión de Iglesia - Células",
-    page_icon="⛪",
-    layout="wide"
-)
+app = Flask(__name__)
+DB_PATH = r"C:\Users\Pc\Desktop\MiAppPython\MiBaseDatos\database.db"
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
-def get_db_connection():
-    conn = sqlite3.connect("iglesia.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+# Funciones auxiliares para conversión segura
+def to_int(valor):
+    try:
+        return int(valor)
+    except (ValueError, TypeError):
+        return 0
+
+def to_float(valor):
+    try:
+        return float(valor)
+    except (ValueError, TypeError):
+        return 0.0
 
 def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
     
-    # Tabla de Usuarios para Login
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS usuarios (
+    # Reportes de células
+    c.execute('''CREATE TABLE IF NOT EXISTS cell_reports (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
-    )
-    """)
-    
-    # Tabla de Células (Gestión centralizada de células)
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS celulas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT UNIQUE NOT NULL,
-        lider TEXT,
-        anfitrion TEXT,
-        direccion TEXT,
-        fecha_creacion DATE DEFAULT CURRENT_DATE
-    )
-    """)
-    
-    # Tabla de Miembros por Célula
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS miembros (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre_completo TEXT NOT NULL,
-        telefono TEXT,
-        celula TEXT NOT NULL,
-        rol TEXT NOT NULL,
-        fecha_registro DATE DEFAULT CURRENT_DATE
-    )
-    """)
-    
-    # Tabla de Reportes de Célula
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS reportes_celula (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        celula TEXT NOT NULL,
-        lider TEXT NOT NULL,
-        jefe_casa TEXT,
+        nombre_celda TEXT,
+        fecha_reunion TEXT,
+        adultos INTEGER,
+        jovenes INTEGER,
+        ninos INTEGER,
+        amigos INTEGER,
+        visitas INTEGER,
+        lider_casa TEXT,
         tema_biblico TEXT,
-        texto_biblico TEXT,
-        fecha DATE NOT NULL,
-        asistencia_miembros INTEGER NOT NULL DEFAULT 0,
-        asistencia_visitas INTEGER NOT NULL DEFAULT 0,
-        asistencia_amigos INTEGER NOT NULL DEFAULT 0,
-        asistencia_ninos INTEGER NOT NULL DEFAULT 0,
-        ofrenda REAL DEFAULT 0.0,
-        observaciones TEXT
-    )
-    """)
+        texto_central TEXT,
+        ofrenda REAL,
+        necesidades TEXT,
+        nivel_espiritual TEXT,
+        nivel_asistencia INTEGER
+    )''')
     
-    # Tabla de Descarrilados / Ausentes
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS descarrilados (
+    # Nuevos convertidos
+    c.execute('''CREATE TABLE IF NOT EXISTS new_converts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT NOT NULL,
-        telefono TEXT,
+        nombre_completo TEXT,
+        contacto TEXT,
+        direccion TEXT,
+        fecha_nacimiento TEXT,
+        edad INTEGER,
+        estado TEXT,
+        fecha_conversion TEXT,
+        tipo_decision TEXT,
+        celda_asignada TEXT,
+        observacion TEXT
+    )''')
+    
+    # Estadísticas de miembros
+    c.execute('''CREATE TABLE IF NOT EXISTS members_stats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre_completo TEXT,
         celula TEXT,
-        motivo TEXT,
-        estado_seguimiento TEXT DEFAULT 'Pendiente',
-        fecha_registro DATE DEFAULT CURRENT_DATE
-    )
-    """)
-
-    # Migración automática de columnas para bases de datos existentes
-    columnas_reportes = [
-        ("jefe_casa", "TEXT"),
-        ("tema_biblico", "TEXT"),
-        ("texto_biblico", "TEXT"),
-        ("asistencia_amigos", "INTEGER DEFAULT 0"),
-        ("asistencia_ninos", "INTEGER DEFAULT 0"),
-        ("observaciones", "TEXT")
-    ]
-    for col_nombre, col_tipo in columnas_reportes:
-        try:
-            cursor.execute(f"ALTER TABLE reportes_celula ADD COLUMN {col_nombre} {col_tipo}")
-        except sqlite3.OperationalError:
-            pass  # La columna ya existe
-
+        sexo TEXT,
+        evaluacion_crecimiento INTEGER,
+        tipo_discipulado TEXT,
+        ministerio TEXT,
+        estado TEXT DEFAULT 'activo'
+    )''')
+    
     conn.commit()
     conn.close()
 
 init_db()
 
-# -----------------------------------------------------------------------------
-# FUNCIONES AUXILIARES DE DATOS
-# -----------------------------------------------------------------------------
-def obtener_lista_celulas():
-    """Obtiene la lista única de células registradas en 'celulas', 'miembros' y 'reportes'."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT DISTINCT celula FROM (
-            SELECT nombre AS celula FROM celulas WHERE nombre IS NOT NULL AND nombre != ''
-            UNION
-            SELECT celula FROM miembros WHERE celula IS NOT NULL AND celula != ''
-            UNION
-            SELECT celula FROM reportes_celula WHERE celula IS NOT NULL AND celula != ''
-        ) ORDER BY celula ASC
-    """)
-    celulas = [row["celula"] for row in cursor.fetchall()]
+@app.route('/')
+def index():
+    # Obtener el listado de células únicas registradas para seleccionar automáticamente en los formularios
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT DISTINCT nombre_celda FROM cell_reports WHERE nombre_celda IS NOT NULL AND nombre_celda != ''")
+    celulas = [fila[0] for fila in c.fetchall()]
     conn.close()
-    return celulas
+    return render_template('index.html', celulas=celulas)
 
-def obtener_lider_por_celula(nombre_celula):
-    """Obtiene el líder registrado en la tabla celulas, reportes previos o miembros."""
-    if not nombre_celula:
-        return ""
-    conn = get_db_connection()
-    cursor = conn.cursor()
+@app.route('/cell_report', methods=['POST'])
+def cell_report():
+    datos = request.form.to_dict()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''INSERT INTO cell_reports (
+        nombre_celda, fecha_reunion, adultos, jovenes, ninos, amigos, visitas,
+        lider_casa, tema_biblico, texto_central, ofrenda, necesidades,
+        nivel_espiritual, nivel_asistencia
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        datos.get('cell_name'),
+        datos.get('fecha_reunion'),
+        to_int(datos.get('adults')),
+        to_int(datos.get('youth')),
+        to_int(datos.get('children')),
+        to_int(datos.get('friends')),
+        to_int(datos.get('visits')),
+        datos.get('lider_casa'),
+        datos.get('tema_biblico'),
+        datos.get('texto_central'),
+        to_float(datos.get('offering')),
+        datos.get('necesidades'),
+        datos.get('nivel_espiritual'),
+        to_int(datos.get('attendance_level'))
+    ))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('informes'))
+
+@app.route('/new_convert', methods=['POST'])
+def new_convert():
+    datos = request.form.to_dict()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''INSERT INTO new_converts (
+        nombre_completo, contacto, direccion, fecha_nacimiento, edad, estado,
+        fecha_conversion, tipo_decision, celda_asignada, observacion
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        datos.get('full_name'),
+        datos.get('contact'),
+        datos.get('address'),
+        datos.get('birth_date'),
+        to_int(datos.get('age')),
+        datos.get('estado'),
+        datos.get('fecha_conversion'),
+        datos.get('tipo_decision'),
+        datos.get('celda_asignada'),
+        datos.get('observacion')
+    ))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('informes'))
+
+@app.route('/member_stats', methods=['POST'])
+def member_stats():
+    datos = request.form.to_dict()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''INSERT INTO members_stats (
+        nombre_completo, celula, sexo, evaluacion_crecimiento, tipo_discipulado, ministerio
+    ) VALUES (?, ?, ?, ?, ?, ?)''', (
+        datos.get('full_name'),
+        datos.get('cell'),
+        datos.get('sex'),
+        to_int(datos.get('growth_eval')),
+        datos.get('tipo_discipulado'),
+        datos.get('ministerio')
+    ))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('informes'))
+
+@app.route('/converts')
+def converts():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT * FROM new_converts ORDER BY id DESC")
+    convertir_filas = c.fetchall()
     
-    # 1. Buscar en la tabla celulas
-    cursor.execute("SELECT lider FROM celulas WHERE nombre = ?", (nombre_celula,))
-    res = cursor.fetchone()
-    if res and res["lider"]:
-        conn.close()
-        return res["lider"]
-        
-    # 2. Buscar en reportes previos
-    cursor.execute(
-        "SELECT lider FROM reportes_celula WHERE celula = ? ORDER BY id DESC LIMIT 1",
-        (nombre_celula,),
-    )
-    res = cursor.fetchone()
-    if res and res["lider"]:
-        conn.close()
-        return res["lider"]
-
-    # 3. Buscar en miembros
-    cursor.execute(
-        "SELECT nombre_completo FROM miembros WHERE celula = ? AND rol = 'Líder' LIMIT 1",
-        (nombre_celula,),
-    )
-    res = cursor.fetchone()
+    # Obtener lista de células únicas para desplegar en el formulario
+    c.execute("SELECT DISTINCT nombre_celda FROM cell_reports WHERE nombre_celda IS NOT NULL AND nombre_celda != ''")
+    celulas = [fila[0] for fila in c.fetchall()]
     conn.close()
-    return res["nombre_completo"] if res else ""
-
-# -----------------------------------------------------------------------------
-# 2. FUNCIONES DE SEGURIDAD
-# -----------------------------------------------------------------------------
-def make_hashes(password):
-    return hashlib.sha256(str.encode(password)).hexdigest()
-
-# -----------------------------------------------------------------------------
-# 3. CONTROL DE SESIÓN Y AUTENTICACIÓN
-# -----------------------------------------------------------------------------
-if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = False
-if "user_name" not in st.session_state:
-    st.session_state["user_name"] = ""
-
-def auth_screen():
-    st.title("⛪ Sistema de Gestión Ecuménica y Células")
-    opcion = st.sidebar.selectbox(
-        "Acceso al Sistema", ["Iniciar Sesión", "Crear nueva cuenta de usuario"]
-    )
-    if opcion == "Iniciar Sesión":
-        st.subheader("🔑 Iniciar Sesión")
-        email = st.text_input("Correo Electrónico")
-        password = st.text_input("Contraseña", type="password")
-        if st.button("Ingresar", type="primary"):
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            hashed_pw = make_hashes(password)
-            cursor.execute(
-                "SELECT * FROM usuarios WHERE email = ? AND password = ?",
-                (email, hashed_pw),
-            )
-            usuario = cursor.fetchone()
-            conn.close()
-            if usuario:
-                st.session_state["logged_in"] = True
-                st.session_state["user_name"] = usuario["nombre"]
-                st.success(f"Bienvenido/a {usuario['nombre']}")
-                st.rerun()
-            else:
-                st.error("Correo o contraseña incorrectos")
-    elif opcion == "Crear nueva cuenta de usuario":
-        st.subheader("👤 Crear Nueva Cuenta")
-        nombre = st.text_input("Nombre Completo")
-        email = st.text_input("Correo Electrónico")
-        password = st.text_input("Contraseña", type="password")
-        confirm_password = st.text_input("Confirmar Contraseña", type="password")
-        if st.button("Registrarse"):
-            if password != confirm_password:
-                st.warning("Las contraseñas no coinciden")
-            elif not nombre or not email or not password:
-                st.warning("Por favor completa todos los campos")
-            else:
-                try:
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "INSERT INTO usuarios (nombre, email, password) VALUES (?, ?, ?)",
-                        (nombre, email, make_hashes(password)),
-                    )
-                    conn.commit()
-                    conn.close()
-                    st.success("Cuenta creada exitosamente. Ahora puedes Iniciar Sesión.")
-                except sqlite3.IntegrityError:
-                    st.error("El correo ya se encuentra registrado.")
-
-# -----------------------------------------------------------------------------
-# 4. MÓDULOS Y VISTAS PRINCIPALES
-# -----------------------------------------------------------------------------
-def panel_de_control():
-    st.title("📊 Panel de Control")
-    st.markdown("---")
-    conn = get_db_connection()
-    df_reportes = pd.read_sql_query("SELECT * FROM reportes_celula", conn)
-    df_miembros = pd.read_sql_query("SELECT * FROM miembros", conn)
-    conn.close()
-
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Reportes", len(df_reportes))
-    with col2:
-        if not df_reportes.empty:
-            total_asistencia = (
-                df_reportes["asistencia_miembros"].sum()
-                + df_reportes["asistencia_visitas"].sum()
-                + df_reportes.get("asistencia_amigos", pd.Series([0])).sum()
-                + df_reportes.get("asistencia_ninos", pd.Series([0])).sum()
-            )
-        else:
-            total_asistencia = 0
-        st.metric("Asistencia Total Acumulada", total_asistencia)
-    with col3:
-        st.metric("Total Miembros Registrados", len(df_miembros))
-    with col4:
-        total_ofrenda = (
-            df_reportes["ofrenda"].sum() if not df_reportes.empty else 0.0
-        )
-        st.metric("Total Ofrendas ($)", f"${total_ofrenda:,.2f}")
-
-    st.markdown("---")
-    col_chart1, col_chart2 = st.columns(2)
-    with col_chart1:
-        st.subheader("📈 Asistencia por Célula")
-        if not df_reportes.empty:
-            columnas_asistencia = [
-                c for c in [
-                    "asistencia_miembros",
-                    "asistencia_visitas",
-                    "asistencia_amigos",
-                    "asistencia_ninos",
-                ] if c in df_reportes.columns
-            ]
-            df_celula_asistencia = (
-                df_reportes.groupby("celula")[columnas_asistencia]
-                .sum()
-                .reset_index()
-            )
-            fig_celulas = px.bar(
-                df_celula_asistencia,
-                x="celula",
-                y=columnas_asistencia,
-                title="Asistencia Detallada por Célula",
-                barmode="group",
-                labels={"value": "Personas", "celula": "Célula", "variable": "Categoría"},
-            )
-            st.plotly_chart(fig_celulas, use_container_width=True)
-        else:
-            st.info("Aún no hay reportes registrados para mostrar gráficos.")
-
-    with col_chart2:
-        st.subheader("👥 Distribución de Miembros")
-        if not df_miembros.empty:
-            df_miembros_celula = (
-                df_miembros["celula"].value_counts().reset_index()
-            )
-            df_miembros_celula.columns = ["Célula", "Cantidad"]
-            fig_miembros = px.pie(
-                df_miembros_celula,
-                names="Célula",
-                values="Cantidad",
-                title="Distribución de Miembros por Célula",
-                hole=0.4,
-            )
-            st.plotly_chart(fig_miembros, use_container_width=True)
-        else:
-            st.info("Aún no hay miembros registrados para mostrar gráficos.")
-
-def gestion_celulas():
-    st.title("🏡 Registro y Gestión de Células")
-    st.markdown("Registra las células principales para mantener los datos organizados en todo el sistema.")
     
-    with st.form("form_celulas", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            nombre_celula = st.text_input("Nombre / Número de la Célula *")
-            lider = st.text_input("Líder Encargado")
-        with col2:
-            anfitrion = st.text_input("Anfitrión / Jefe de Casa")
-            direccion = st.text_input("Dirección o Sector")
-            
-        guardar = st.form_submit_button("Registrar Célula")
-        
-        if guardar:
-            if nombre_celula:
-                try:
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "INSERT INTO celulas (nombre, lider, anfitrion, direccion) VALUES (?, ?, ?, ?)",
-                        (nombre_celula.strip(), lider.strip(), anfitrion.strip(), direccion.strip())
-                    )
-                    conn.commit()
-                    conn.close()
-                    st.success(f"Célula '{nombre_celula}' creada correctamente.")
-                    st.rerun()
-                except sqlite3.IntegrityError:
-                    st.error("Ya existe una célula registrada con ese nombre.")
-            else:
-                st.warning("El nombre de la célula es obligatorio.")
-                
-    st.subheader("Lista de Células Registradas")
-    conn = get_db_connection()
-    df_celulas = pd.read_sql_query("SELECT id, nombre, lider, anfitrion, direccion, fecha_creacion FROM celulas", conn)
-    conn.close()
-    st.dataframe(df_celulas, use_container_width=True)
+    return render_template('converts.html', nuevos_convertidores=convertir_filas, celulas=celulas)
 
-def registro_miembros():
-    st.title("📌 Registro de Miembro por Célula")
-    celulas_existentes = obtener_lista_celulas()
+@app.route('/reports')
+def informes():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
     
-    with st.form("form_miembro", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            nombre = st.text_input("Nombre Completo")
-            telefono = st.text_input("Teléfono / WhatsApp")
-        with col2:
-            opcion_celula = st.selectbox(
-                "Seleccionar Célula",
-                ["-- Seleccionar Célula --"] + celulas_existentes + ["+ Registrar Nueva Célula"],
-            )
-            nueva_celula_input = ""
-            if opcion_celula == "+ Registrar Nueva Célula" or not celulas_existentes:
-                nueva_celula_input = st.text_input("Nombre / Número de la Nueva Célula")
-            
-            rol = st.selectbox(
-                "Rol en la Célula", ["Miembro", "Líder", "Anfitrión", "Asistente"]
-            )
-            
-        guardar = st.form_submit_button("Registrar Miembro")
+    # Filtros
+    filtro_fecha = request.args.get('fecha')
+    filtro_celda = request.args.get('nombre_celda')
+    
+    consulta = "SELECT * FROM cell_reports WHERE 1=1"
+    params = []
+    
+    if filtro_fecha:
+        consulta += " AND fecha_reunion = ?"
+        params.append(filtro_fecha)
+    if filtro_celda:
+        consulta += " AND nombre_celda = ?"
+        params.append(filtro_celda)
         
-        if guardar:
-            celula_final = (
-                nueva_celula_input if opcion_celula == "+ Registrar Nueva Célula" else opcion_celula
-            )
-            if celula_final == "-- Seleccionar Célula --":
-                celula_final = ""
-                
-            if nombre and celula_final:
-                conn = get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute(
-                    "INSERT INTO miembros (nombre_completo, telefono, celula, rol) VALUES (?, ?, ?, ?)",
-                    (nombre, telefono, celula_final, rol),
-                )
-                conn.commit()
-                conn.close()
-                st.success(f"Miembro {nombre} registrado con éxito en la célula '{celula_final}'.")
-                st.rerun()
-            else:
-                st.warning("Completa el nombre y la célula como mínimo.")
-
-    st.subheader("Lista de Miembros Registrados")
-    conn = get_db_connection()
-    df_miembros = pd.read_sql_query(
-        "SELECT id, nombre_completo, telefono, celula, rol, fecha_registro FROM miembros", conn
-    )
-    conn.close()
-    st.dataframe(df_miembros, use_container_width=True)
-
-def reporte_celula():
-    st.title("📋 Reporte de Célula")
-    celulas_existentes = obtener_lista_celulas()
-
-    st.markdown("### Selecciona la Célula")
-    if celulas_existentes:
-        celula_seleccionada = st.selectbox(
-            "Seleccione una Célula existente:",
-            celulas_existentes + ["+ Otra Célula"],
+    c.execute(consulta, params)
+    filas_de_celdas = c.fetchall()
+    
+    # Convertir columnas numéricas
+    filas_de_celdas = [
+        (
+            r[0], r[1], r[2], to_int(r[3]), to_int(r[4]), to_int(r[5]),
+            to_int(r[6]), to_int(r[7]), r[8], r[9], r[10], to_float(r[11]),
+            r[12], r[13], to_int(r[14])
         )
-        if celula_seleccionada == "+ Otra Célula":
-            celula_nombre = st.text_input("Nombre de la nueva Célula:")
-        else:
-            celula_nombre = celula_seleccionada
-    else:
-        st.info("No hay células registradas. Ingresa el nombre manualmente:")
-        celula_nombre = st.text_input("Nombre de la Célula:")
-
-    lider_sugerido = obtener_lider_por_celula(celula_nombre) if celula_nombre else ""
-
-    with st.form("form_reporte", clear_on_submit=True):
-        st.markdown("---")
-        col1, col2 = st.columns(2)
-        with col1:
-            lider = st.text_input("Líder a Cargo", value=lider_sugerido)
-            jefe_casa = st.text_input("Nombre del Jefe de Casa / Anfitrión")
-            fecha = st.date_input("Fecha del Reporte")
-        with col2:
-            tema_biblico = st.text_input("Tema Bíblico")
-            texto_biblico = st.text_input("Texto Bíblico / Cita")
-
-        st.markdown("#### Asistencia y Ofrenda")
-        col_a1, col_a2, col_a3, col_a4, col_a5 = st.columns(5)
-        with col_a1:
-            asist_miembros = st.number_input("Miembros", min_value=0, step=1)
-        with col_a2:
-            asist_visitas = st.number_input("Visitas", min_value=0, step=1)
-        with col_a3:
-            asist_amigos = st.number_input("Amigos", min_value=0, step=1)
-        with col_a4:
-            asist_ninos = st.number_input("Niños", min_value=0, step=1)
-        with col_a5:
-            ofrenda = st.number_input("Monto Ofrenda ($)", min_value=0.0, step=1.0)
-
-        observaciones = st.text_area("Observaciones / Peticiones de Oración")
-        guardar = st.form_submit_button("Guardar Reporte")
-
-        if guardar:
-            if celula_nombre and lider:
-                conn = get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute(
-                    """INSERT INTO reportes_celula 
-                    (celula, lider, jefe_casa, tema_biblico, texto_biblico, fecha, asistencia_miembros, asistencia_visitas, asistencia_amigos, asistencia_ninos, ofrenda, observaciones) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (
-                        celula_nombre,
-                        lider,
-                        jefe_casa,
-                        tema_biblico,
-                        texto_biblico,
-                        fecha,
-                        asist_miembros,
-                        asist_visitas,
-                        asist_amigos,
-                        asist_ninos,
-                        ofrenda,
-                        observaciones,
-                    ),
-                )
-                conn.commit()
-                conn.close()
-                st.success("Reporte guardado correctamente.")
-                st.rerun()
-            else:
-                st.warning("Por favor asegúrate de especificar el nombre de la célula y del líder.")
-
-    st.subheader("Historial de Reportes")
-    conn = get_db_connection()
-    df_rep = pd.read_sql_query(
-        "SELECT * FROM reportes_celula ORDER BY fecha DESC", conn
-    )
+        for r in filas_de_celdas
+    ]
+    
+    c.execute("SELECT * FROM new_converts")
+    convertir_filas = c.fetchall()
+    
+    c.execute("SELECT * FROM members_stats")
+    filas_miembro = c.fetchall()
+    
+    # Obtener lista de células únicas para cargar listas desplegables
+    c.execute("SELECT DISTINCT nombre_celda FROM cell_reports WHERE nombre_celda IS NOT NULL AND nombre_celda != ''")
+    celulas = [fila[0] for fila in c.fetchall()]
+    
     conn.close()
-    st.dataframe(df_rep, use_container_width=True)
-
-def registro_descarrilados():
-    st.title("💔 Registro de Descarrilados / Ausentes")
-    st.info("Espacio para dar seguimiento pastoral a las personas que se han distanciado de la iglesia o célula.")
-    celulas_existentes = obtener_lista_celulas()
-
-    with st.form("form_descarrilados", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            nombre = st.text_input("Nombre de la Persona")
-            telefono = st.text_input("Teléfono")
-            celula = st.selectbox(
-                "Célula a la que pertenecía",
-                ["-- Ninguna / Desconocida --"] + celulas_existentes,
-            )
-        with col2:
-            estado = st.selectbox(
-                "Estado de Seguimiento",
-                ["Pendiente", "En Contacto", "Restaurado", "No Interesado"],
-            )
-            motivo = st.text_area("Motivo de la ausencia / Observación pastoral")
-
-        guardar = st.form_submit_button("Registrar para Seguimiento")
-
-        if guardar:
-            if nombre:
-                celula_val = "" if celula == "-- Ninguna / Desconocida --" else celula
-                conn = get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute(
-                    "INSERT INTO descarrilados (nombre, telefono, celula, motivo, estado_seguimiento) VALUES (?, ?, ?, ?, ?)",
-                    (nombre, telefono, celula_val, motivo, estado),
-                )
-                conn.commit()
-                conn.close()
-                st.success("Registro añadido a la lista de consolidación/seguimiento.")
-                st.rerun()
-            else:
-                st.warning("Por favor ingrese al menos el nombre.")
-
-    st.subheader("Personas en Seguimiento Pastoral")
-    conn = get_db_connection()
-    df_desc = pd.read_sql_query(
-        "SELECT * FROM descarrilados ORDER BY fecha_registro DESC", conn
+    return render_template(
+        'reports.html', 
+        informes_de_celda=filas_de_celdas, 
+        nuevos_convertidores=convertir_filas, 
+        estadisticas_miembros=filas_miembro,
+        celulas=celulas
     )
+
+# Exportar CSV
+@app.route('/export/cell_reports')
+def export_cell_reports():
+    conn = sqlite3.connect(DB_PATH)
+    df = pd.read_sql_query("SELECT * FROM cell_reports", conn)
     conn.close()
-    st.dataframe(df_desc, use_container_width=True)
+    salida = df.to_csv(index=False)
+    return Response(
+        salida, 
+        mimetype="text/csv", 
+        headers={"Content-Disposition": "attachment;filename=cell_reports.csv"}
+    )
 
-# -----------------------------------------------------------------------------
-# 5. ESTRUCTURA PRINCIPAL DE LA APLICACIÓN
-# -----------------------------------------------------------------------------
-def main():
-    if not st.session_state["logged_in"]:
-        auth_screen()
-    else:
-        st.sidebar.write(f"👤 Usuario: **{st.session_state['user_name']}**")
-        if st.sidebar.button("Cerrar Sesión"):
-            st.session_state["logged_in"] = False
-            st.session_state["user_name"] = ""
-            st.rerun()
+# Exportar Excel
+@app.route('/export/cell_reports_excel')
+def export_cell_reports_excel():
+    conn = sqlite3.connect(DB_PATH)
+    df = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+    conn.close()
+    salida = BytesIO()
+    with pd.ExcelWriter(salida, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Informes")
+    datos_de_excel = salida.getvalue()
+    return Response(
+        datos_de_excel, 
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+        headers={"Content-Disposition": "attachment;filename=cell_reports.xlsx"}
+    )
 
-        st.sidebar.markdown("---")
-        opcion = st.sidebar.radio(
-            "Navegación Principal",
-            [
-                "Panel de Control",
-                "Gestión de Células",
-                "Registro de Miembro por Célula",
-                "Reporte de Célula",
-                "Registro de Descarrilados",
-            ],
-        )
+# Detalle de célula
+@app.route('/cell/<int:cell_id>')
+def cell_detail(cell_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT * FROM cell_reports WHERE id=?", (cell_id,))
+    celda = c.fetchone()
+    conn.close()
+    return render_template('cell_detail.html', cell=celda)
 
-        if opcion == "Panel de Control":
-            panel_de_control()
-        elif opcion == "Gestión de Células":
-            gestion_celulas()
-        elif opcion == "Registro de Miembro por Célula":
-            registro_miembros()
-        elif opcion == "Reporte de Célula":
-            reporte_celula()
-        elif opcion == "Registro de Descarrilados":
-            registro_descarrilados()
+# Marcar miembro como desertó
+@app.route('/member/<int:member_id>/update')
+def member_update(member_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE members_stats SET estado='desertó' WHERE id=?", (member_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('informes'))
+
+@app.route('/cell/<int:cell_id>/update', methods=['POST'])
+def cell_update(cell_id):
+    datos = request.form.to_dict()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''UPDATE cell_reports SET necesidades=?, nivel_espiritual=?, nivel_asistencia=? WHERE id=?''', (
+        datos.get('needs'), 
+        datos.get('spiritual_level'), 
+        to_int(datos.get('attendance_level')), 
+        cell_id
+    ))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('cell_detail', cell_id=cell_id))
 
 if __name__ == "__main__":
-    main()
+    app.run(debug=True, host="0.0.0.0", port=5000)
