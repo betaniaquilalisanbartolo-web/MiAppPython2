@@ -5,7 +5,10 @@ import pandas as pd
 from io import BytesIO
 
 app = Flask(__name__)
-DB_PATH = r"C:\Users\Pc\Desktop\MiAppPython\MiBaseDatos\database.db"
+
+# Ruta dinámica adaptada a cualquier sistema (Windows local o Servidor Linux/Cloud)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "MiBaseDatos", "database.db")
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 # Funciones auxiliares para conversión segura
