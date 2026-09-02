@@ -81,7 +81,6 @@ init_db()
 
 @app.route('/')
 def index():
-    # Obtener el listado de células únicas registradas para seleccionar automáticamente en los formularios
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT DISTINCT nombre_celda FROM cell_reports WHERE nombre_celda IS NOT NULL AND nombre_celda != ''")
@@ -110,8 +109,8 @@ def cell_report():
         datos.get('tema_biblico'),
         datos.get('texto_central'),
         to_float(datos.get('offering')),
-        datos.get('necesidades'),
-        datos.get('nivel_espiritual'),
+        datos.get('necesidades') or datos.get('needs'),
+        datos.get('nivel_espiritual') or datos.get('spiritual_level'),
         to_int(datos.get('attendance_level'))
     ))
     conn.commit()
@@ -168,7 +167,6 @@ def converts():
     c.execute("SELECT * FROM new_converts ORDER BY id DESC")
     convertir_filas = c.fetchall()
     
-    # Obtener lista de células únicas para desplegar en el formulario
     c.execute("SELECT DISTINCT nombre_celda FROM cell_reports WHERE nombre_celda IS NOT NULL AND nombre_celda != ''")
     celulas = [fila[0] for fila in c.fetchall()]
     conn.close()
@@ -197,23 +195,34 @@ def informes():
     c.execute(consulta, params)
     filas_de_celdas = c.fetchall()
     
-    # Convertir columnas numéricas
+    # Mapeo corregido columna por columna según el schema
     filas_de_celdas = [
         (
-            r[0], r[1], r[2], to_int(r[3]), to_int(r[4]), to_int(r[5]),
-            to_int(r[6]), to_int(r[7]), r[8], r[9], r[10], to_float(r[11]),
-            r[12], r[13], to_int(r[14])
+            r[0],                  # id
+            r[1],                  # nombre_celda
+            r[2],                  # fecha_reunion
+            to_int(r[3]),          # adultos
+            to_int(r[4]),          # jovenes
+            to_int(r[5]),          # ninos
+            to_int(r[6]),          # amigos
+            to_int(r[7]),          # visitas
+            r[8],                  # lider_casa
+            r[9],                  # tema_biblico
+            r[10],                 # texto_central
+            to_float(r[11]),       # ofrenda
+            r[12],                 # necesidades
+            r[13],                 # nivel_espiritual
+            to_int(r[14])          # nivel_asistencia
         )
         for r in filas_de_celdas
     ]
     
-    c.execute("SELECT * FROM new_converts")
+    c.execute("SELECT * FROM new_converts ORDER BY id DESC")
     convertir_filas = c.fetchall()
     
-    c.execute("SELECT * FROM members_stats")
+    c.execute("SELECT * FROM members_stats ORDER BY id DESC")
     filas_miembro = c.fetchall()
     
-    # Obtener lista de células únicas para cargar listas desplegables
     c.execute("SELECT DISTINCT nombre_celda FROM cell_reports WHERE nombre_celda IS NOT NULL AND nombre_celda != ''")
     celulas = [fila[0] for fila in c.fetchall()]
     
@@ -281,8 +290,8 @@ def cell_update(cell_id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''UPDATE cell_reports SET necesidades=?, nivel_espiritual=?, nivel_asistencia=? WHERE id=?''', (
-        datos.get('needs'), 
-        datos.get('spiritual_level'), 
+        datos.get('needs') or datos.get('necesidades'), 
+        datos.get('spiritual_level') or datos.get('nivel_espiritual'), 
         to_int(datos.get('attendance_level')), 
         cell_id
     ))
