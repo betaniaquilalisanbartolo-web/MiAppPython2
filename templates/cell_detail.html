@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle de Célula</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+
+<!-- Navbar con la pestaña Nuevos Convertidos -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">MiAppPython</a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="/">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link" href="/reports">Reportes</a></li>
+        <li class="nav-item"><a class="nav-link" href="/converts">Nuevos Convertidos</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-4">
+    <h1 class="text-center mb-4">Detalle de la Célula</h1>
+
+    <!-- Información actual -->
+    <div class="table-responsive shadow-sm mb-4">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre de la Célula</th>
+                    <th>Fecha de Reunión</th>
+                    <th>Adultos</th>
+                    <th>Jóvenes</th>
+                    <th>Niños</th>
+                    <th>Amigos</th>
+                    <th>Visitas</th>
+                    <th>Jefe de Casa</th>
+                    <th>Tema Bíblico</th>
+                    <th>Texto Central</th>
+                    <th>Ofrenda</th>
+                    <th>Necesidades</th>
+                    <th>Nivel Espiritual</th>
+                    <th>Nivel Asistencia</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if cell %}
+                <tr>
+                    <td>{{ cell[0] }}</td>
+                    <td>{{ cell[1] }}</td>
+                    <td>{{ cell[2] }}</td>
+                    <td>{{ cell[3] }}</td>
+                    <td>{{ cell[4] }}</td>
+                    <td>{{ cell[5] }}</td>
+                    <td>{{ cell[6] }}</td>
+                    <td>{{ cell[7] }}</td>
+                    <td>{{ cell[8] }}</td>
+                    <td>{{ cell[9] }}</td>
+                    <td>{{ cell[10] }}</td>
+                    <td>${{ "%.2f"|format(cell[11]|float) }}</td>
+                    <td>{{ cell[12] }}</td>
+                    <td>{{ cell[13] }}</td>
+                    <td>{{ cell[14] }}%</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="15" class="text-center">No se encontraron detalles para esta célula.</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Formulario de actualización -->
+    {% if cell %}
+    <div class="card p-4 shadow-sm mb-4">
+        <h3 class="mb-3">Actualizar Información</h3>
+        <form action="/cell/{{ cell[0] }}/update" method="post">
+            <div class="mb-3">
+                <label for="needs" class="form-label">Necesidades</label>
+                <select class="form-select" name="needs" id="needs">
+                    <option value="Oración" {% if cell[12] == 'Oración' %}selected{% endif %}>Oración</option>
+                    <option value="Apoyo económico" {% if cell[12] == 'Apoyo económico' %}selected{% endif %}>Apoyo económico</option>
+                    <option value="Visitas pastorales" {% if cell[12] == 'Visitas pastorales' %}selected{% endif %}>Visitas pastorales</option>
+                    <option value="Consejería" {% if cell[12] == 'Consejería' %}selected{% endif %}>Consejería</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="spiritual_level" class="form-label">Nivel Espiritual</label>
+                <select class="form-select" name="spiritual_level" id="spiritual_level">
+                    <option value="Bajo" {% if cell[13] == 'Bajo' %}selected{% endif %}>Bajo</option>
+                    <option value="Medio" {% if cell[13] == 'Medio' %}selected{% endif %}>Medio</option>
+                    <option value="Alto" {% if cell[13] == 'Alto' %}selected{% endif %}>Alto</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="attendance_level" class="form-label">Nivel de Asistencia (Actual: {{ cell[14] }}%)</label>
+                <input type="range" class="form-range" name="attendance_level" id="attendance_level" min="0" max="100" value="{{ cell[14] if cell[14] else 0 }}">
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Guardar cambios</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="mb-5">
+        <a href="/reports" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Volver a Reportes</a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
