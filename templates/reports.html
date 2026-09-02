@@ -1,0 +1,271 @@
+from flask import Flask, render_template, request, redirect, url_for, Response
+import sqlite3
+import os
+import pandas as pd
+from io import BytesIO
+
+app = Flask(__name__)
+DB_PATH = r"C:\Users\Pc\Desktop\MiAppPython\MiBaseDatos\database.db"
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+# Funciones auxiliares para conversión segura
+def to_int(valor):
+    try:
+        return int(valor)
+    except (ValueError, TypeError):
+        return 0
+
+def to_float(valor):
+    try:
+        return float(valor)
+    except (ValueError, TypeError):
+        return 0.0
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Reportes de células
+    c.execute('''CREATE TABLE IF NOT EXISTS cell_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre_celda TEXT,
+        fecha_de_reunion TEXT,
+        adultos INTEGER,
+        juventud INTEGER,
+        ninos INTEGER,
+        amigos INTEGER,
+        visitas INTEGER,
+        lider_de_casa TEXT,
+        tema_biblico TEXT,
+        texto_central TEXT,
+        ofreciendo REAL,
+        necesita TEXT,
+        nivel_espiritual TEXT,
+        nivel_de_asistencia INTEGER
+    )''')
+    
+    # Nuevos convertidos
+    c.execute('''CREATE TABLE IF NOT EXISTS new_converts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre_completo TEXT,
+        contactar TEXT,
+        direccion TEXT,
+        fecha_de_nacimiento TEXT,
+        edad INTEGER,
+        estado TEXT,
+        fecha_de_conversion TEXT,
+        tipo_de_decision TEXT,
+        celda_asignada TEXT,
+        observacion TEXT
+    )''')
+    
+    # Estadísticas de miembros
+    c.execute('''CREATE TABLE IF NOT EXISTS members_stats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre_completo TEXT,
+        celula TEXT,
+        sexo TEXT,
+        evaluacion_crecimiento INTEGER,
+        tipo_discipulado TEXT,
+        ministerio TEXT,
+        estado TEXT DEFAULT 'activo'
+    )''')
+    
+    conn.commit()
+    conn.close()
+
+init_db()
+
+@app.route('/')
+def index():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT DISTINCT nombre_celda FROM cell_reports WHERE nombre_celda IS NOT NULL AND nombre_celda != ''")
+    celulas = [fila[0] for fila in c.fetchall()]
+    conn.close()
+    return render_template('index.html', celulas=celulas)
+
+@app.route('/cell_report', methods=['POST'])
+def cell_report():
+    datos = request.form.to_dict()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''INSERT INTO cell_reports (
+        nombre_celda, fecha_de_reunion, adultos, juventud, ninos, amigos, visitas,
+        lider_de_casa, tema_biblico, texto_central, ofreciendo, necesita,
+        nivel_espiritual, nivel_de_asistencia
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        datos.get('cell_name'),
+        datos.get('meeting_date'),
+        to_int(datos.get('adults')),
+        to_int(datos.get('youth')),
+        to_int(datos.get('children')),
+        to_int(datos.get('friends')),
+        to_int(datos.get('visits')),
+        datos.get('house_leader'),
+        datos.get('biblical_theme'),
+        datos.get('central_text'),
+        to_float(datos.get('offering')),
+        datos.get('needs'),
+        datos.get('spiritual_level'),
+        to_int(datos.get('attendance_level'))
+    ))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('informes'))
+
+@app.route('/new_convert', methods=['POST'])
+def new_convert():
+    datos = request.form.to_dict()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''INSERT INTO new_converts (
+        nombre_completo, contactar, direccion, fecha_de_nacimiento, edad, estado,
+        fecha_de_conversion, tipo_de_decision, celda_asignada, observacion
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        datos.get('full_name'),
+        datos.get('contact'),
+        datos.get('address'),
+        datos.get('birth_date'),
+        to_int(datos.get('age')),
+        datos.get('status'),
+        datos.get('conversion_date'),
+        datos.get('decision_type'),
+        datos.get('assigned_cell'),
+        datos.get('observation')
+    ))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('informes'))
+
+@app.route('/member_stats', methods=['POST'])
+def member_stats():
+    datos = request.form.to_dict()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''INSERT INTO members_stats (
+        nombre_completo, celula, sexo, evaluacion_crecimiento, tipo_discipulado, ministerio
+    ) VALUES (?, ?, ?, ?, ?, ?)''', (
+        datos.get('full_name'),
+        datos.get('cell'),
+        datos.get('sex'),
+        to_int(datos.get('growth_eval')),
+        datos.get('discipleship_type'),
+        datos.get('ministry')
+    ))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('informes'))
+
+@app.route('/reports')
+def informes():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Filtros
+    filtro_fecha = request.args.get('date')
+    filtro_celda = request.args.get('cell_name')
+    
+    consulta = "SELECT * FROM cell_reports WHERE 1=1"
+    params = []
+    
+    if filtro_fecha:
+        consulta += " AND fecha_de_reunion = ?"
+        params.append(filtro_fecha)
+    if filtro_celda:
+        consulta += " AND nombre_celda = ?"
+        params.append(filtro_celda)
+        
+    c.execute(consulta, params)
+    filas_de_celdas = c.fetchall()
+    
+    # Convertir columnas numéricas
+    filas_de_celdas = [
+        (
+            r[0], r[1], r[2], to_int(r[3]), to_int(r[4]), to_int(r[5]),
+            to_int(r[6]), to_int(r[7]), r[8], r[9], r[10], to_float(r[11]),
+            r[12], r[13], to_int(r[14])
+        )
+        for r in filas_de_celdas
+    ]
+    
+    c.execute("SELECT * FROM new_converts")
+    convertir_filas = c.fetchall()
+    
+    c.execute("SELECT * FROM members_stats")
+    filas_miembro = c.fetchall()
+    
+    c.execute("SELECT DISTINCT nombre_celda FROM cell_reports WHERE nombre_celda IS NOT NULL AND nombre_celda != ''")
+    celulas = [fila[0] for fila in c.fetchall()]
+    
+    conn.close()
+    return render_template(
+        'reports.html', 
+        cell_reports=filas_de_celdas, 
+        nuevos_convertidores=convertir_filas, 
+        estadisticas_miembros=filas_miembro,
+        celulas=celulas
+    )
+
+@app.route('/export/cell_reports')
+def export_cell_reports():
+    conn = sqlite3.connect(DB_PATH)
+    df = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+    conn.close()
+    salida = df.to_csv(index=False)
+    return Response(
+        salida, 
+        mimetype="text/csv", 
+        headers={"Content-Disposition": "attachment;filename=cell_reports.csv"}
+    )
+
+@app.route('/export/cell_reports_excel')
+def export_cell_reports_excel():
+    conn = sqlite3.connect(DB_PATH)
+    df = pd.read_sql_query("SELECT * FROM cell_reports", conn)
+    conn.close()
+    salida = BytesIO()
+    with pd.ExcelWriter(salida, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Informes")
+    datos_de_excel = salida.getvalue()
+    return Response(
+        datos_de_excel, 
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+        headers={"Content-Disposition": "attachment;filename=cell_reports.xlsx"}
+    )
+
+@app.route('/cell/<int:cell_id>')
+def cell_detail(cell_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT * FROM cell_reports WHERE id=?", (cell_id,))
+    celda = c.fetchone()
+    conn.close()
+    return render_template('cell_detail.html', cell=celda)
+
+@app.route('/member/<int:member_id>/update')
+def member_update(member_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE members_stats SET estado='desertó' WHERE id=?", (member_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('informes'))
+
+@app.route('/cell/<int:cell_id>/update', methods=['POST'])
+def cell_update(cell_id):
+    datos = request.form.to_dict()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''UPDATE cell_reports SET necesita=?, nivel_espiritual=?, nivel_de_asistencia=? WHERE id=?''', (
+        datos.get('needs'), 
+        datos.get('spiritual_level'), 
+        to_int(datos.get('attendance_level')), 
+        cell_id
+    ))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('cell_detail', cell_id=cell_id))
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
